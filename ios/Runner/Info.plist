@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>Cette application a besoin d'accéder à votre galerie pour choisir une image de room.</string>
+  <key>NSCameraUsageDescription</key>
+  <string>Cette application a besoin d'accéder à votre appareil photo pour prendre une photo de room.</string>
+  <key>NSPhotoLibraryAddUsageDescription</key>
+  <string>Cette application a besoin d'enregistrer des images dans votre galerie.</string>
 </dict>
 </plist>

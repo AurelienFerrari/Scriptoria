@@ -5,7 +5,7 @@ class CampaignCard extends StatelessWidget {
   final String lastUpdate;
   final String imageUrl;
   final VoidCallback onTap;
-  final Widget actionButton;
+  final Widget? actionButton;
 
   const CampaignCard({
     Key? key,
@@ -13,7 +13,7 @@ class CampaignCard extends StatelessWidget {
     required this.lastUpdate,
     required this.imageUrl,
     required this.onTap,
-    required this.actionButton,
+    this.actionButton,
   }) : super(key: key);
 
   @override
@@ -57,7 +57,21 @@ class CampaignCard extends StatelessWidget {
                   ],
                 ),
               ),
-              actionButton,
+              if (actionButton != null) ...[
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: 0,
+                    maxWidth: 120,
+                    minHeight: 36,
+                    maxHeight: 36,
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: actionButton!,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
