@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../ui/widgets/room_navbar.dart';
-import 'room_chat_page.dart';
+import 'room_home_page.dart';
 import 'room_map_page.dart';
 import 'room_players_page.dart';
 
@@ -14,8 +14,14 @@ class RoomShell extends StatefulWidget {
 
 class _RoomShellState extends State<RoomShell> {
   int _tab = 0;
-  final List<Widget> _roomPages = const [
-    RoomChatPage(),
+  final List<Widget> _roomPages = [
+    RoomHomePage(
+      roomName: 'Salle du Dragon',
+      iconPath: 'assets/images/dragon.png',
+      iconIsAsset: true,
+      description: 'Bienvenue dans la salle du Dragon ! Ici, vivez des aventures épiques.',
+      lastUpdate: 'Aujourd’hui à 12:30',
+    ),
     RoomMapPage(),
     RoomPlayersPage(),
   ];
