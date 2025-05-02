@@ -17,11 +17,18 @@ class HomePage extends StatelessWidget {
           ],
         ),
         actions: [
-          CircleAvatar(
-            backgroundColor: Colors.grey[800],
-            child: const Icon(Icons.person_outline),
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, '/profile');
+              },
+              child: CircleAvatar(
+                backgroundColor: Colors.grey[800],
+                child: const Icon(Icons.person_outline),
+              ),
+            ),
           ),
-          const SizedBox(width: 16),
         ],
       ),
       body: SingleChildScrollView(
@@ -40,23 +47,19 @@ class HomePage extends StatelessWidget {
             CampaignCard(
               title: 'Mystères de l\'Ombre',
               lastUpdate: 'il y a 3 h',
-              imageUrl: 'assets/images/mystery.jpg',
-              onTap: () {},
-              actionButton: ElevatedButton(
-                onPressed: () {},
-                child: const Text('Rejoindre la room'),
-              ),
+              imageUrl: 'assets/images/mystery.png',
+              onTap: () {
+                Navigator.pushNamed(context, '/room');
+              },
             ),
             const SizedBox(height: 12),
             CampaignCard(
               title: 'La Quête du Dragon',
               lastUpdate: 'il y a 2 jours',
-              imageUrl: 'assets/images/dragon.jpg',
-              onTap: () {},
-              actionButton: ElevatedButton(
-                onPressed: () {},
-                child: const Text('Continuer'),
-              ),
+              imageUrl: 'assets/images/dragon.png',
+              onTap: () {
+                Navigator.pushNamed(context, '/room');
+              },
             ),
             const SizedBox(height: 24),
             const Text(
@@ -82,47 +85,64 @@ class HomePage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.add),
-                  label: const Text('Nouvelle room'),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/CreationRoom');
+                    },
+                    label: const Text(
+                      'Créer une room',
+                      style: TextStyle(
+                        color: Color(0xFFB39DDB),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      side: const BorderSide(color: Color(0xFFB39DDB), width: 2),
+                      backgroundColor: Colors.white.withOpacity(0.03),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(32),
+                      ),
+                      shadowColor: Colors.black.withOpacity(0.12),
+                      elevation: 2,
+                    ),
+                  ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.note_add),
-                  label: const Text('Nouveau document'),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/JoinRoom');
+                    },
+                    label: const Text(
+                      'Rejoindre une room',
+                      style: TextStyle(
+                        color: Color(0xFFB39DDB),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      side: const BorderSide(color: Color(0xFFB39DDB), width: 2),
+                      backgroundColor: Colors.white.withOpacity(0.03),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(32),
+                      ),
+                      shadowColor: Colors.black.withOpacity(0.12),
+                      elevation: 2,
+                    ),
+                  ),
                 ),
               ],
             ),
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Accueil',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.folder),
-            label: 'Documents',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map),
-            label: 'Carte',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list),
-            label: 'Notes',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profil',
-          ),
-        ],
-      ),
+
     );
   }
 }
