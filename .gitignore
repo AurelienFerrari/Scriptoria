@@ -46,3 +46,25 @@ app.*.map.json
 database_init.sql
 DATABASE_SCHEMA.md
 DB_SCHEMA_VISUAL.md
+database_seed.sql
+
+# Environment variables - NEVER commit these!
+.env
+.env.local
+.env.*.local
+
+# Secrets
+*.key
+*.pem
+secrets/
+.env.example
+SUPABASE_SETUP.md
+SECURITY.md
+FIRST_RUN.md
+
+# Development scripts with secrets
+run_dev.ps1
+
+# Credentials files - NEVER commit these!
+lib/config/supabase_credentials.dart
+lib/config/supabase_credentials.dart.example
