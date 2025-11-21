@@ -41,74 +41,87 @@ class _RoomHomePageState extends State<RoomHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          if (widget.iconPath != null)
-            Container(
-              width: 96,
-              height: 96,
-              margin: const EdgeInsets.only(top: 32, bottom: 24), // baisse l'icône
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                color: Colors.grey[900],
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pop(); // Retour à la home page
+          },
+        ),
+        title: Text(widget.roomName),
+        backgroundColor: const Color(0xFF161622),
+      ),
+      backgroundColor: const Color(0xFF161622),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (widget.iconPath != null)
+              Container(
+                width: 96,
+                height: 96,
+                margin: const EdgeInsets.only(top: 32, bottom: 24), // baisse l'icône
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: Colors.grey.shade900,
+                ),
+                child: widget.iconIsAsset
+                    ? Image.asset(widget.iconPath!, fit: BoxFit.cover)
+                    : Image.file(
+                        File(widget.iconPath!),
+                        fit: BoxFit.cover,
+                      ),
               ),
-              child: widget.iconIsAsset
-                  ? Image.asset(widget.iconPath!, fit: BoxFit.cover)
-                  : Image.file(
-                      File(widget.iconPath!),
-                      fit: BoxFit.cover,
-                    ),
+            Text(
+              widget.roomName,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 28,
+                color: Colors.white,
+              ),
+              textAlign: TextAlign.center,
             ),
-          Text(
-            widget.roomName,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 28,
-              color: Colors.white,
+            SizedBox(height: 12),
+            Text(
+              widget.description,
+              style: TextStyle(fontSize: 16, color: Colors.white),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            widget.description,
-            style: const TextStyle(fontSize: 16, color: Colors.white70),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-
-          // Galerie d'images (GridView)
-          const SizedBox(height: 24),
-          GalleryGrid(
-            images: _galleryImages,
-            onAddImage: _addImage,
-            onDeleteImage: (index) {
-              setState(() {
-                _galleryImages.removeAt(index);
-              });
-            },
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.update, color: Colors.white54, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                widget.lastUpdateText,
-                style: const TextStyle(color: Colors.white60, fontSize: 15),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                widget.lastUpdate,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-              ),
-            ],
-          ),
-        ],
+            SizedBox(height: 32),
+            // Galerie d'images (GridView)
+            SizedBox(height: 24),
+            GalleryGrid(
+              images: _galleryImages,
+              onAddImage: _addImage,
+              onDeleteImage: (index) {
+                setState(() {
+                  _galleryImages.removeAt(index);
+                });
+              },
+            ),
+            SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.update, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  widget.lastUpdateText,
+                  style: TextStyle(color: Colors.white, fontSize: 15),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  widget.lastUpdate,
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+

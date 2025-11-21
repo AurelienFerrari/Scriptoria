@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'features/home/presentation/pages/home_page.dart';
-import 'features/room/presentation/room_shell.dart';
-import 'features/room/presentation/room_create_page.dart';
-import 'features/room/presentation/room_join_page.dart';
+import 'features/room/presentation/shell/room_shell.dart';
+import 'features/room/presentation/home/room_create_page.dart';
+import 'features/room/presentation/home/room_join_page.dart';
 import 'features/profile/presentation/pages/profile_page.dart';
 
 void main() {

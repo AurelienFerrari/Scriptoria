@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+database_init.sql
+DATABASE_SCHEMA.md
+DB_SCHEMA_VISUAL.md
