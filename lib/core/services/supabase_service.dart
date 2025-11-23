@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:typed_data';
 import 'dart:io';
 import 'package:scriptoria/config/supabase_credentials.dart';
+import 'package:crypto/crypto.dart';
 
 class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
@@ -39,7 +40,7 @@ class SupabaseService {
           print('✓ Variables chargées depuis .env');
         }
       } catch (e) {
-        print('⚠️ Fichier .env non trouvé');
+        print('Fichier .env non trouvé');
       }
     }
 
@@ -90,8 +91,13 @@ class SupabaseService {
     required String displayName,
   }) async {
     try {
+      // Nettoyer l'email: trim et convertir en minuscules
+      final cleanEmail = email.trim().toLowerCase();
+      print('[SUPABASE] Email envoyé: "$cleanEmail" (length: ${cleanEmail.length})');
+      print('[SUPABASE] Email original: "$email"');
+      
       final response = await _client.auth.signUp(
-        email: email,
+        email: cleanEmail,
         password: password,
         data: {
           'username': username,
@@ -101,11 +107,12 @@ class SupabaseService {
 
       if (response.user != null) {
         // Créer le profil utilisateur dans la table users
-        await _createUserProfile(
+        await createUserProfile(
           userId: response.user!.id,
-          email: email,
+          email: cleanEmail,
           username: username,
           displayName: displayName,
+          password: password,
         );
       }
 
@@ -181,36 +188,65 @@ class SupabaseService {
   // ============ PROFIL UTILISATEUR ============
 
   /// Créer le profil utilisateur dans la table users
-  Future<void> _createUserProfile({
+  Future<void> createUserProfile({
     required String userId,
     required String email,
     required String username,
     required String displayName,
+    String? password,
   }) async {
     try {
-      await _client.from('users').insert({
-        'id': userId,
+      print('[SUPABASE] Création du profil pour email: $email');
+      final userData = {
         'email': email,
         'username': username,
         'display_name': displayName,
         'created_at': DateTime.now().toIso8601String(),
-      });
+      };
+
+      // Ajouter le hash du mot de passe s'il est fourni
+      if (password != null && password.isNotEmpty) {
+        userData['password_hash'] = sha256.convert(password.codeUnits).toString();
+      }
+
+      print('[SUPABASE] Données à insérer: $userData');
+      await _client.from('users').insert(userData);
+      print('[SUPABASE] Profil créé avec succès pour $email');
     } catch (e) {
-      // L'utilisateur est créé même si le profil échoue
-      print('Erreur création profil: $e');
+      print('[SUPABASE] Erreur création profil: $e');
+      print('[SUPABASE] Type d\'erreur: ${e.runtimeType}');
     }
   }
 
-  /// Récupérer le profil utilisateur
+  /// Récupérer le profil utilisateur par email
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
     try {
+      // Récupérer l'utilisateur actuel pour obtenir son email
+      final currentUser = _client.auth.currentUser;
+      if (currentUser == null || currentUser.email == null) {
+        print('[SUPABASE] Utilisateur non connecté ou email non disponible');
+        return null;
+      }
+      
+      print('[SUPABASE] Récupération du profil pour email: ${currentUser.email}');
+      
+      // Chercher le profil par email (email est la clé primaire)
       final response = await _client
           .from('users')
           .select()
-          .eq('id', userId)
-          .single();
+          .eq('email', currentUser.email!)
+          .maybeSingle();
+      
+      if (response != null) {
+        print('[SUPABASE] Profil trouvé pour ${currentUser.email}');
+      } else {
+        print('[SUPABASE] Aucun profil trouvé pour ${currentUser.email}');
+      }
+      
       return response;
     } catch (e) {
+      print('[SUPABASE] Erreur lors de la récupération du profil: $e');
+      print('[SUPABASE] Type d\'erreur: ${e.runtimeType}');
       return null;
     }
   }

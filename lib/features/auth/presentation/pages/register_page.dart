@@ -108,14 +108,86 @@ class _RegisterPageState extends State<RegisterPage> {
       print('[REGISTER] Email: ${response.user?.email}');
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Compte créé avec succès! Veuillez vérifier votre email.'),
-            backgroundColor: Color(0xFF6FE3E1),
-          ),
+        // Afficher un dialog avec les instructions
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF232336),
+              title: const Text(
+                '✓ Compte créé avec succès!',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Veuillez valider votre email pour activer votre compte.',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6FE3E1).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF6FE3E1).withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'À faire:',
+                          style: TextStyle(
+                            color: Color(0xFF6FE3E1),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '1. Ouvrez votre email: ${_emailController.text.trim()}',
+                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          '2. Cliquez sur le lien de confirmation',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          '3. Revenez vous connecter',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Vous pouvez fermer cette fenêtre et vous connecter une fois votre email validé.',
+                    style: TextStyle(color: Colors.white60, fontSize: 12, fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    print('[REGISTER] Redirection vers la page de login...');
+                    Navigator.pushReplacementNamed(context, '/login');
+                  },
+                  child: const Text(
+                    'Aller à la connexion',
+                    style: TextStyle(color: Color(0xFF6FE3E1), fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            );
+          },
         );
-        print('[REGISTER] Redirection vers la page de login...');
-        Navigator.pushReplacementNamed(context, '/login');
       }
     } catch (e) {
       print('[REGISTER] ERREUR lors de l\'inscription: $e');

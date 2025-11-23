@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:scriptoria/core/services/supabase_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -10,19 +11,72 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isEditMode = false;
+  final _supabaseService = SupabaseService();
 
-  // Données de démo
-  final String username = 'Luna';
-  final String email = 'luna@player.test';
-  final String bio = 'Joueuse orientée roleplay. Adore les mondes fantastiques.';
-  final int campaignsCount = 2;
-  final int charactersCount = 3;
-  final int sessionsCount = 5;
+  // Données de l'utilisateur
+  String username = '';
+  String email = '';
+  String displayName = '';
+  String bio = '';
+  int campaignsCount = 0;
+  int charactersCount = 0;
+  int sessionsCount = 0;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final currentUser = _supabaseService.getCurrentUser();
+      print('[PROFILE] currentUser: $currentUser');
+      
+      if (currentUser != null) {
+        print('[PROFILE] Chargement du profil pour l\'utilisateur: ${currentUser.id}');
+        final profile = await _supabaseService.getUserProfile(currentUser.id);
+        print('[PROFILE] Profil reçu: $profile');
+        
+        if (profile != null) {
+          setState(() {
+            username = profile['username'] ?? '';
+            email = profile['email'] ?? '';
+            displayName = profile['display_name'] ?? '';
+            bio = profile['bio'] ?? '';
+          });
+        } else {
+          print('[PROFILE] Profil est null - utilisation des données d\'authentification');
+          // Utiliser les données de Supabase Auth si le profil n'est pas accessible
+          final displayNameFromAuth = currentUser.userMetadata?['display_name'] as String? ?? 'Utilisateur';
+          final usernameFromAuth = currentUser.userMetadata?['username'] as String? ?? currentUser.email?.split('@')[0] ?? 'user';
+          
+          setState(() {
+            username = usernameFromAuth;
+            email = currentUser.email ?? '';
+            displayName = displayNameFromAuth;
+            bio = '';
+          });
+        }
+      } else {
+        print('[PROFILE] Utilisateur non connecté, redirection vers login');
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/login');
+          return;
+        }
+      }
+      // Toujours arrêter le chargement, même si les données sont vides
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      print('[PROFILE] Erreur lors du chargement du profil: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -64,108 +118,114 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Padding pour éviter la barre de nav système
-            // ============ HEADER PROFIL ============
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    cardColor,
-                    bgColor,
-                  ],
-                ),
+      body: _isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 24),
+            )
+          : SingleChildScrollView(
               child: Column(
                 children: [
-                  // Avatar avec badge
-                  Stack(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: primaryColor,
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: primaryColor.withOpacity(0.3),
-                              blurRadius: 20,
-                              spreadRadius: 5,
+                  // Padding pour éviter la barre de nav système
+                  // ============ HEADER PROFIL ============
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          cardColor,
+                          bgColor,
+                        ],
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(
+                      children: [
+                        // Avatar avec badge
+                        Stack(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: primaryColor,
+                                  width: 3,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: primaryColor.withOpacity(0.3),
+                                    blurRadius: 20,
+                                    spreadRadius: 5,
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 56,
+                                backgroundColor: cardColor,
+                                child: const Icon(
+                                  Icons.person,
+                                  size: 72,
+                                  color: primaryColor,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: primaryColor,
+                                  border: Border.all(color: bgColor, width: 3),
+                                ),
+                                padding: const EdgeInsets.all(8),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  size: 20,
+                                  color: bgColor,
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                        child: CircleAvatar(
-                          radius: 56,
-                          backgroundColor: cardColor,
-                          child: const Icon(
-                            Icons.person,
-                            size: 72,
-                            color: primaryColor,
+                        const SizedBox(height: 20),
+                        // Nom d'utilisateur
+                        Text(
+                          username.isNotEmpty ? username : 'Utilisateur',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 28,
                           ),
                         ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: primaryColor,
-                            border: Border.all(color: bgColor, width: 3),
-                          ),
-                          padding: const EdgeInsets.all(8),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            size: 20,
-                            color: bgColor,
+                        const SizedBox(height: 8),
+                        // Email
+                        Text(
+                          email.isNotEmpty ? email : 'Email non disponible',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  // Nom d'utilisateur
-                  Text(
-                    username,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 28,
+                        const SizedBox(height: 16),
+                        // Bio
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Text(
+                            bio.isNotEmpty ? bio : 'Aucune bio',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white60,
+                              fontSize: 13,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  // Email
-                  Text(
-                    email,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Bio
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Text(
-                      bio,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white60,
-                        fontSize: 13,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
 
             // ============ STATISTIQUES ============
             Padding(
@@ -251,8 +311,42 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () {
-                        // TODO: Implémenter la déconnexion
+                      onPressed: () async {
+                        // Afficher une confirmation
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              backgroundColor: const Color(0xFF232336),
+                              title: const Text(
+                                'Déconnexion',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              content: const Text(
+                                'Êtes-vous sûr de vouloir vous déconnecter?',
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Annuler', style: TextStyle(color: Color(0xFF6FE3E1))),
+                                ),
+                                TextButton(
+                                  onPressed: () async {
+                                    await _supabaseService.signOut();
+                                    if (mounted) {
+                                      Navigator.pop(context);
+                                      // Utiliser popUntil pour revenir à la racine, puis naviguer vers login
+                                      Navigator.of(context).popUntil((route) => route.isFirst);
+                                      Navigator.of(context).pushReplacementNamed('/login');
+                                    }
+                                  },
+                                  child: const Text('Déconnexion', style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            );
+                          },
+                        );
                       },
                       icon: const Icon(Icons.logout),
                       label: const Text('Déconnexion'),
@@ -275,7 +369,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             ),
           ],
         ),
-      ),
+            ),
     );
   }
 
