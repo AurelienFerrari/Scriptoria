@@ -99,10 +99,3 @@ Créer la page dans le bon dossier.
 Ajouter l’onglet dans le widget de navbar concerné.
 Ajouter la page dans la liste _pages ou _roomPages du Shell visé.
 (Optionnel) Ajouter la route dans main.dart si besoin d’un accès direct.
-N’hésite pas si tu veux des exemples pour :
-
-Ajouter une page.
-Naviguer entre Shells.
-Utiliser GoRouter pour une navigation avancée.
-Je peux aussi générer un README complet pour le repo si tu le souhaites !
-
