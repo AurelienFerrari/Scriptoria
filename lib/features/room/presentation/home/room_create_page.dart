@@ -75,15 +75,20 @@ class _RoomCreatePageState extends State<RoomCreatePage> {
                     }
                     return;
                   }
+                  Navigator.pop(context); // Ferme le dialog AVANT d'ouvrir la galerie
+                  await Future.delayed(const Duration(milliseconds: 200));
+                  FocusScope.of(context).unfocus();
+                  await Future.delayed(const Duration(milliseconds: 100));
                   final ImagePicker picker = ImagePicker();
                   final XFile? file = await picker.pickImage(source: ImageSource.gallery);
                   if (file != null) {
-                    setState(() {
-                      _pickedFile = file;
-                      _iconPath = file.path;
-                      _iconIsAsset = false;
-                    });
-                    Navigator.pop(context);
+                    if (mounted) {
+                      setState(() {
+                        _pickedFile = file;
+                        _iconPath = file.path;
+                        _iconIsAsset = false;
+                      });
+                    }
                   }
                 },
                 child: Container(
@@ -199,12 +204,12 @@ class _RoomCreatePageState extends State<RoomCreatePage> {
                       min: 2,
                       max: 10,
                       divisions: 8,
-                      label: '$_nbPlayers',
+                      label: _nbPlayers == 10 ? 'illimité' : '$_nbPlayers',
                       onChanged: (v) => setState(() => _nbPlayers = v.round()),
                     ),
                   ),
                   SizedBox(width: 8),
-                  Text('$_nbPlayers', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(_nbPlayers == 10 ? 'illimité' : '$_nbPlayers', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ],
               ),
               const SizedBox(height: 32),
