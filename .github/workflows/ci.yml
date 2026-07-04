@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  FLUTTER_VERSION: '3.29.3'
+
+jobs:
+  analyze_and_test:
+    name: Analyse & tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      # Fichier de credentials factice : le vrai fichier contient des clés locales
+      # et n'est jamais commité (voir lib/config/supabase_credentials.dart.example).
+      # Les tests/analyse n'appellent pas Supabase pour de vrai, ces valeurs
+      # bidon suffisent à faire compiler le projet.
+      - name: Préparer les credentials Supabase factices (compilation uniquement)
+        run: cp lib/config/supabase_credentials.dart.example lib/config/supabase_credentials.dart
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  build_apk:
+    name: Build APK (artefact)
+    needs: analyze_and_test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Préparer les credentials Supabase factices (compilation uniquement)
+        run: cp lib/config/supabase_credentials.dart.example lib/config/supabase_credentials.dart
+
+      # Vraies clés Supabase pour que l'APK produit soit réellement utilisable.
+      # Nécessite les secrets de dépôt SUPABASE_URL et SUPABASE_ANON_KEY.
+      - name: Générer le .env avec les secrets du dépôt
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+
+      - run: flutter pub get
+      - run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scriptoria-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+  deploy_web:
+    name: Déploiement web (GitHub Pages)
+    needs: analyze_and_test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Préparer les credentials Supabase factices (compilation uniquement)
+        run: cp lib/config/supabase_credentials.dart.example lib/config/supabase_credentials.dart
+
+      - name: Générer le .env avec les secrets du dépôt
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+
+      - run: flutter pub get
+      - run: flutter build web --release --base-href /Scriptoria-/
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:scriptoria/core/services/supabase_service.dart';
+import 'package:scriptoria/core/utils/friendly_auth_error.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({Key? key}) : super(key: key);
@@ -192,7 +193,7 @@ class _RegisterPageState extends State<RegisterPage> {
     } catch (e) {
       print('[REGISTER] ERREUR lors de l\'inscription: $e');
       print('[REGISTER] Type d\'erreur: ${e.runtimeType}');
-      setState(() => _errorMessage = 'Erreur d\'inscription: ${e.toString()}');
+      setState(() => _errorMessage = friendlyAuthErrorMessage(e));
     } finally {
       setState(() => _isLoading = false);
     }

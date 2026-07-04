@@ -11,12 +11,49 @@ import 'features/auth/presentation/pages/register_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialiser Supabase
-  final supabaseService = SupabaseService();
-  await supabaseService.initialize();
-  
-  runApp(const MyApp());
+
+  Object? initError;
+  try {
+    await SupabaseService().initialize();
+  } catch (e) {
+    initError = e;
+  }
+
+  runApp(initError == null ? const MyApp() : SupabaseInitErrorApp(error: initError));
+}
+
+class SupabaseInitErrorApp extends StatelessWidget {
+  final Object error;
+  const SupabaseInitErrorApp({super.key, required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Scriptoria',
+      theme: ThemeData.dark(),
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                const SizedBox(height: 16),
+                const Text(
+                  "Impossible d'initialiser Supabase",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text('$error', textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {

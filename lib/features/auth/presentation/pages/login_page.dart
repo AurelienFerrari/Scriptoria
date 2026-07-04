@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:scriptoria/core/services/supabase_service.dart';
+import 'package:scriptoria/core/utils/friendly_auth_error.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -45,7 +46,7 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacementNamed(context, '/home');
       }
     } catch (e) {
-      setState(() => _errorMessage = 'Erreur de connexion: ${e.toString()}');
+      setState(() => _errorMessage = friendlyAuthErrorMessage(e));
     } finally {
       setState(() => _isLoading = false);
     }

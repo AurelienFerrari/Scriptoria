@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import 'dart:io';
 import 'package:scriptoria/config/supabase_credentials.dart';
@@ -23,10 +24,13 @@ class SupabaseService {
     String? supabaseAnonKey;
 
     // 1. Essayer de charger depuis les variables d'environnement système d'abord
-    supabaseUrl = Platform.environment['SUPABASE_URL'];
-    supabaseAnonKey = Platform.environment['SUPABASE_ANON_KEY'];
-    if (supabaseUrl != null && supabaseAnonKey != null) {
-      print('✓ Variables chargées depuis les variables d\'environnement système');
+    // (dart:io Platform n'existe pas sur le web, on saute cette étape dans ce cas)
+    if (!kIsWeb) {
+      supabaseUrl = Platform.environment['SUPABASE_URL'];
+      supabaseAnonKey = Platform.environment['SUPABASE_ANON_KEY'];
+      if (supabaseUrl != null && supabaseAnonKey != null) {
+        print('✓ Variables chargées depuis les variables d\'environnement système');
+      }
     }
 
     // 2. Sinon, essayer de charger depuis .env
@@ -195,6 +199,7 @@ class SupabaseService {
     try {
       print('[SUPABASE] Création du profil pour email: $email');
       final userData = {
+        'id': userId,
         'email': email,
         'username': username,
         'display_name': displayName,
