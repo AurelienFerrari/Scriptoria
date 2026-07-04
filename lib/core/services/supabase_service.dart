@@ -4,7 +4,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:typed_data';
 import 'dart:io';
 import 'package:scriptoria/config/supabase_credentials.dart';
-import 'package:crypto/crypto.dart';
 
 class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
@@ -112,7 +111,6 @@ class SupabaseService {
           email: cleanEmail,
           username: username,
           displayName: displayName,
-          password: password,
         );
       }
 
@@ -193,7 +191,6 @@ class SupabaseService {
     required String email,
     required String username,
     required String displayName,
-    String? password,
   }) async {
     try {
       print('[SUPABASE] Création du profil pour email: $email');
@@ -203,11 +200,6 @@ class SupabaseService {
         'display_name': displayName,
         'created_at': DateTime.now().toIso8601String(),
       };
-
-      // Ajouter le hash du mot de passe s'il est fourni
-      if (password != null && password.isNotEmpty) {
-        userData['password_hash'] = sha256.convert(password.codeUnits).toString();
-      }
 
       print('[SUPABASE] Données à insérer: $userData');
       await _client.from('users').insert(userData);

@@ -57,8 +57,6 @@ database_seed.sql
 *.key
 *.pem
 secrets/
-.env.example
-SUPABASE_SETUP.md
 SECURITY.md
 FIRST_RUN.md
 
@@ -66,5 +64,5 @@ FIRST_RUN.md
 run_dev.ps1
 
 # Credentials files - NEVER commit these!
+# (the .example / .dart.example templates ARE committed on purpose)
 lib/config/supabase_credentials.dart
-lib/config/supabase_credentials.dart.example

@@ -60,8 +60,8 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    if (_passwordController.text.length < 6) {
-      setState(() => _errorMessage = 'Le mot de passe doit contenir au moins 6 caractères');
+    if (_passwordController.text.length < 8) {
+      setState(() => _errorMessage = 'Le mot de passe doit contenir au moins 8 caractères');
       return;
     }
 
