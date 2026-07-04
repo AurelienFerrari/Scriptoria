@@ -93,7 +93,7 @@ jobs:
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
 
       - run: flutter pub get
-      - run: flutter build web --release --base-href /Scriptoria-/
+      - run: flutter build web --release --base-href /Scriptoria/
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
