@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:scriptoria/core/services/supabase_service.dart';
-import 'core/theme/app_theme.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/room/presentation/shell/room_shell.dart';
 import 'features/room/presentation/home/room_create_page.dart';

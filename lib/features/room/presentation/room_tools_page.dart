@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'outils/de_page.dart';
 import 'outils/frise_page.dart';
 import 'outils/relations_page.dart';
-import 'outils/de_page.dart';
-import 'outils/frise_page.dart';
-import 'outils/relations_page.dart';
 
 class RoomToolsPage extends StatelessWidget {
   const RoomToolsPage({Key? key}) : super(key: key);

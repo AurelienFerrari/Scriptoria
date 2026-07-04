@@ -9,7 +9,6 @@ class RoomJoinPage extends StatefulWidget {
 
 class _RoomJoinPageState extends State<RoomJoinPage> {
   final _formKey = GlobalKey<FormState>();
-  String _code = '';
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +29,6 @@ class _RoomJoinPageState extends State<RoomJoinPage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) => value == null || value.isEmpty ? 'Veuillez entrer un code' : null,
-                onSaved: (value) => _code = value ?? '',
               ),
               const SizedBox(height: 32),
               SizedBox(

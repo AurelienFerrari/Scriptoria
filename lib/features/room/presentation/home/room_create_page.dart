@@ -14,8 +14,6 @@ class RoomCreatePage extends StatefulWidget {
 
 class _RoomCreatePageState extends State<RoomCreatePage> {
   final _formKey = GlobalKey<FormState>();
-  String _roomName = '';
-  String _description = '';
   int _nbPlayers = 4;
   String? _iconPath; // Chemin local de l'icône
   bool _iconIsAsset = true;
@@ -129,7 +127,6 @@ class _RoomCreatePageState extends State<RoomCreatePage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) => value == null || value.isEmpty ? 'Veuillez entrer un nom' : null,
-                onSaved: (value) => _roomName = value ?? '',
               ),
               const SizedBox(height: 24),
               // Icône du RP
@@ -190,7 +187,6 @@ class _RoomCreatePageState extends State<RoomCreatePage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) => value == null || value.isEmpty ? 'Veuillez entrer une description' : null,
-                onSaved: (value) => _description = value ?? '',
               ),
               const SizedBox(height: 24),
               // Nombre de joueurs

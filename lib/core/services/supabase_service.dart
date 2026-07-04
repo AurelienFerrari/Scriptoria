@@ -54,8 +54,7 @@ class SupabaseService {
       print('✓ Variables chargées depuis supabase_credentials.dart');
     }
 
-    if (supabaseUrl == null || supabaseAnonKey == null || 
-        supabaseUrl.contains('YOUR_PROJECT_ID') || 
+    if (supabaseUrl.contains('YOUR_PROJECT_ID') ||
         supabaseAnonKey.contains('YOUR_ANON_KEY')) {
       throw Exception(
         'Erreur: Variables d\'environnement Supabase non configurées.\n\n'

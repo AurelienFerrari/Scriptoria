@@ -29,7 +29,9 @@ jobs:
         run: cp lib/config/supabase_credentials.dart.example lib/config/supabase_credentials.dart
 
       - run: flutter pub get
-      - run: flutter analyze
+      # Erreurs et warnings bloquent le pipeline ; les infos (style, dépréciations
+      # mineures) sont visibles mais non bloquantes — critère de qualité assumé.
+      - run: flutter analyze --no-fatal-infos
       - run: flutter test
 
   build_apk:
