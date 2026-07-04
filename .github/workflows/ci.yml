@@ -28,6 +28,11 @@ jobs:
       - name: Préparer les credentials Supabase factices (compilation uniquement)
         run: cp lib/config/supabase_credentials.dart.example lib/config/supabase_credentials.dart
 
+      # .env est déclaré comme asset dans pubspec.yaml : sans lui, flutter analyze
+      # le signale comme asset manquant. Pas besoin de vraies valeurs ici.
+      - name: Préparer un .env factice (compilation uniquement)
+        run: cp .env.example .env
+
       - run: flutter pub get
       # Erreurs et warnings bloquent le pipeline ; les infos (style, dépréciations
       # mineures) sont visibles mais non bloquantes — critère de qualité assumé.
