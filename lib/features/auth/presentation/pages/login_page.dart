@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:scriptoria/core/services/supabase_service.dart';
+import 'package:provider/provider.dart';
+import 'package:scriptoria/core/providers/auth_provider.dart';
 import 'package:scriptoria/core/utils/friendly_auth_error.dart';
 
 class LoginPage extends StatefulWidget {
@@ -12,7 +13,6 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _supabaseService = SupabaseService();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -37,7 +37,7 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      await _supabaseService.signIn(
+      await context.read<AuthProvider>().signIn(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );

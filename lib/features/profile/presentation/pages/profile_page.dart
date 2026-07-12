@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:scriptoria/core/providers/auth_provider.dart';
 import 'package:scriptoria/core/services/supabase_service.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -32,7 +34,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
   Future<void> _loadUserProfile() async {
     try {
-      final currentUser = _supabaseService.getCurrentUser();
+      final currentUser = context.read<AuthProvider>().currentUser;
       print('[PROFILE] currentUser: $currentUser');
       
       if (currentUser != null) {
@@ -333,7 +335,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                 ),
                                 TextButton(
                                   onPressed: () async {
-                                    await _supabaseService.signOut();
+                                    await context.read<AuthProvider>().signOut();
                                     if (mounted) {
                                       Navigator.pop(context);
                                       // Utiliser popUntil pour revenir à la racine, puis naviguer vers login

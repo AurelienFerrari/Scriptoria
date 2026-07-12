@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:scriptoria/core/services/supabase_service.dart';
+import 'core/providers/auth_provider.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/room/presentation/shell/room_shell.dart';
 import 'features/room/presentation/home/room_create_page.dart';
@@ -18,7 +20,14 @@ void main() async {
     initError = e;
   }
 
-  runApp(initError == null ? const MyApp() : SupabaseInitErrorApp(error: initError));
+  runApp(
+    initError == null
+        ? ChangeNotifierProvider(
+            create: (_) => AuthProvider(),
+            child: const MyApp(),
+          )
+        : SupabaseInitErrorApp(error: initError),
+  );
 }
 
 class SupabaseInitErrorApp extends StatelessWidget {
@@ -60,8 +69,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final supabaseService = SupabaseService();
-    final isLoggedIn = supabaseService.isUserLoggedIn();
+    final isLoggedIn = context.watch<AuthProvider>().isLoggedIn;
 
     return MaterialApp(
       title: 'Scriptoria',

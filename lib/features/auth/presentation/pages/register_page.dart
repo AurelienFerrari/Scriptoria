@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:scriptoria/core/providers/auth_provider.dart';
 import 'package:scriptoria/core/services/supabase_service.dart';
 import 'package:scriptoria/core/utils/friendly_auth_error.dart';
 
@@ -97,7 +99,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
       // Créer le compte
       print('[REGISTER] Création du compte Supabase...');
-      final response = await _supabaseService.signUp(
+      final response = await context.read<AuthProvider>().signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         username: _usernameController.text.trim(),
