@@ -1,0 +1,35 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:scriptoria/features/room/presentation/home/room_create_page.dart';
+
+void main() {
+  testWidgets('RoomCreatePage affiche les erreurs de validation si le formulaire est vide', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: RoomCreatePage()));
+
+    await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Créer'));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Créer'));
+    await tester.pump();
+
+    expect(find.text('Veuillez entrer un nom'), findsOneWidget);
+    expect(find.text('Veuillez entrer une description'), findsOneWidget);
+  });
+
+  testWidgets('RoomCreatePage exige une icône même si les champs texte sont remplis', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: RoomCreatePage()));
+
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'Mystères de l\'Ombre');
+    await tester.enterText(fields.at(1), 'Une ambiance mystérieuse');
+
+    await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Créer'));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Créer'));
+    await tester.pump();
+
+    expect(find.text('Sélectionne une icône !'), findsOneWidget);
+  });
+}

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:scriptoria/core/providers/auth_provider.dart';
-import 'package:scriptoria/core/services/supabase_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -13,7 +12,6 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isEditMode = false;
-  final _supabaseService = SupabaseService();
 
   // Données de l'utilisateur
   String username = '';
@@ -34,12 +32,13 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
   Future<void> _loadUserProfile() async {
     try {
-      final currentUser = context.read<AuthProvider>().currentUser;
+      final authProvider = context.read<AuthProvider>();
+      final currentUser = authProvider.currentUser;
       print('[PROFILE] currentUser: $currentUser');
-      
+
       if (currentUser != null) {
         print('[PROFILE] Chargement du profil pour l\'utilisateur: ${currentUser.id}');
-        final profile = await _supabaseService.getUserProfile(currentUser.id);
+        final profile = await authProvider.getUserProfile(currentUser.id);
         print('[PROFILE] Profil reçu: $profile');
         
         if (profile != null) {
@@ -65,7 +64,14 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       } else {
         print('[PROFILE] Utilisateur non connecté, redirection vers login');
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/login');
+          // Reporte la navigation après la frame en cours : appeler le
+          // Navigator de façon synchrone depuis initState (avant tout await)
+          // lève "setState() or markNeedsBuild() called during build".
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, '/login');
+            }
+          });
           return;
         }
       }
