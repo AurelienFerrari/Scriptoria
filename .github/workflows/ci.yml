@@ -39,19 +39,28 @@ jobs:
       - run: flutter analyze --no-fatal-infos
       - run: flutter test --coverage
 
-      # Seuil de couverture minimal, calculé sur l'ensemble des lignes de lib/
-      # (pas seulement les fichiers touchés par les tests, sinon le pourcentage
-      # est trompeur - un fichier jamais importé par un test n'apparaît même
-      # pas dans lcov.info). Seuil bas pour l'instant (22,7% au moment où il a
-      # été posé), à relever au fur et à mesure que la couverture progresse.
-      - name: Vérifier le seuil de couverture minimal (20% du code de lib/)
+      # Seuil de couverture minimal, calculé en LH/LF (lignes couvertes /
+      # lignes exécutables) cumulé sur lib/ entier - la même méthode que
+      # lcov/genhtml. Diviser par le nombre brut de lignes (wc -l, qui compte
+      # aussi imports/lignes vides/accolades) plafonnerait artificiellement
+      # le pourcentage bien avant 50%, quel que soit le nombre de tests.
+      # Chaque fichier de lib/ doit être touché par au moins un test pour
+      # apparaître dans lcov.info, sinon il est silencieusement exclu du calcul.
+      - name: Vérifier le seuil de couverture minimal (50% du code exécutable)
         run: |
-          totalLib=$(find lib -name "*.dart" | xargs wc -l | tail -1 | awk '{print $1}')
-          totalHit=$(awk '/^LH:/ { sub("LH:",""); sum+=$0 } END { print sum }' coverage/lcov.info)
-          pct=$(awk -v h="$totalHit" -v t="$totalLib" 'BEGIN { printf "%.1f", (t>0) ? (h/t*100) : 0 }')
-          echo "Couverture : $totalHit/$totalLib lignes de lib/ ($pct%)"
-          awk -v p="$pct" 'BEGIN { exit (p+0 < 20) ? 1 : 0 }' || {
-            echo "Couverture sous le seuil minimal de 20%"
+          untouched=$(comm -23 <(find lib -name "*.dart" ! -name "supabase_credentials.dart" | sort) <(grep "^SF:" coverage/lcov.info | cut -c4- | tr '\\' '/' | sort))
+          if [ -n "$untouched" ]; then
+            echo "Fichiers de lib/ jamais touchés par un test (absents de lcov.info) :"
+            echo "$untouched"
+            exit 1
+          fi
+
+          totalLF=$(awk '/^LF:/ { sub("LF:",""); sum+=$0 } END { print sum }' coverage/lcov.info)
+          totalLH=$(awk '/^LH:/ { sub("LH:",""); sum+=$0 } END { print sum }' coverage/lcov.info)
+          pct=$(awk -v h="$totalLH" -v t="$totalLF" 'BEGIN { printf "%.1f", (t>0) ? (h/t*100) : 0 }')
+          echo "Couverture : $totalLH/$totalLF lignes exécutables ($pct%)"
+          awk -v p="$pct" 'BEGIN { exit (p+0 < 50) ? 1 : 0 }' || {
+            echo "Couverture sous le seuil minimal de 50%"
             exit 1
           }
 
