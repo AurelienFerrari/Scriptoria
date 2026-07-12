@@ -3,9 +3,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:scriptoria/core/providers/auth_provider.dart';
-import 'package:scriptoria/core/services/supabase_service.dart';
 
-class MockSupabaseService extends Mock implements SupabaseService {}
+import '../../helpers/mock_supabase_service.dart';
 
 void main() {
   late MockSupabaseService mockSupabaseService;
@@ -86,5 +85,16 @@ void main() {
 
     verify(() => mockSupabaseService.signOut()).called(1);
     expect(notified, isTrue);
+  });
+
+  test('getUserProfile délègue à SupabaseService', () async {
+    when(
+      () => mockSupabaseService.getUserProfile('user-1'),
+    ).thenAnswer((_) async => {'username': 'demo'});
+
+    final profile = await authProvider.getUserProfile('user-1');
+
+    expect(profile, {'username': 'demo'});
+    verify(() => mockSupabaseService.getUserProfile('user-1')).called(1);
   });
 }

@@ -37,7 +37,23 @@ jobs:
       # Erreurs et warnings bloquent le pipeline ; les infos (style, dépréciations
       # mineures) sont visibles mais non bloquantes — critère de qualité assumé.
       - run: flutter analyze --no-fatal-infos
-      - run: flutter test
+      - run: flutter test --coverage
+
+      # Seuil de couverture minimal, calculé sur l'ensemble des lignes de lib/
+      # (pas seulement les fichiers touchés par les tests, sinon le pourcentage
+      # est trompeur - un fichier jamais importé par un test n'apparaît même
+      # pas dans lcov.info). Seuil bas pour l'instant (22,7% au moment où il a
+      # été posé), à relever au fur et à mesure que la couverture progresse.
+      - name: Vérifier le seuil de couverture minimal (20% du code de lib/)
+        run: |
+          totalLib=$(find lib -name "*.dart" | xargs wc -l | tail -1 | awk '{print $1}')
+          totalHit=$(awk '/^LH:/ { sub("LH:",""); sum+=$0 } END { print sum }' coverage/lcov.info)
+          pct=$(awk -v h="$totalHit" -v t="$totalLib" 'BEGIN { printf "%.1f", (t>0) ? (h/t*100) : 0 }')
+          echo "Couverture : $totalHit/$totalLib lignes de lib/ ($pct%)"
+          awk -v p="$pct" 'BEGIN { exit (p+0 < 20) ? 1 : 0 }' || {
+            echo "Couverture sous le seuil minimal de 20%"
+            exit 1
+          }
 
   build_apk:
     name: Build APK (artefact)

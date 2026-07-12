@@ -46,4 +46,8 @@ class AuthProvider extends ChangeNotifier {
     await _supabaseService.signOut();
     notifyListeners();
   }
+
+  Future<Map<String, dynamic>?> getUserProfile(String userId) {
+    return _supabaseService.getUserProfile(userId);
+  }
 }
