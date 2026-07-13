@@ -106,6 +106,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
+          tooltip: 'Retour',
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -114,12 +115,14 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
               _isEditMode ? Icons.check : Icons.edit,
               color: primaryColor,
             ),
+            tooltip: _isEditMode ? 'Valider les modifications' : 'Modifier le profil',
             onPressed: () {
               setState(() => _isEditMode = !_isEditMode);
             },
           ),
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.white70),
+            tooltip: 'Paramètres',
             onPressed: () {
               // TODO: Naviguer vers les paramètres
             },
@@ -538,7 +541,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
               ],
             ),
           ),
-          const Icon(Icons.arrow_forward_ios, color: Colors.white30, size: 16),
+          const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
         ],
       ),
     );

@@ -214,6 +214,7 @@ class _RegisterPageState extends State<RegisterPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
+          tooltip: 'Retour',
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -351,6 +352,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         _obscurePassword ? Icons.visibility_off : Icons.visibility,
                         color: primaryColor,
                       ),
+                      tooltip: _obscurePassword ? 'Afficher le mot de passe' : 'Masquer le mot de passe',
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
                       },
@@ -382,6 +384,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
                         color: primaryColor,
                       ),
+                      tooltip: _obscureConfirmPassword ? 'Afficher le mot de passe' : 'Masquer le mot de passe',
                       onPressed: () {
                         setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
                       },

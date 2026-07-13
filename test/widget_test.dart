@@ -24,6 +24,15 @@ void main() {
     expect(find.text('Se connecter'), findsOneWidget);
   });
 
+  testWidgets('LoginPage : le champ email a un label persistant et le bouton œil un nom accessible', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_wrapWithProviders(const LoginPage()));
+
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.byTooltip('Afficher le mot de passe'), findsOneWidget);
+  });
+
   testWidgets('LoginPage refuse la connexion si les champs sont vides', (
     WidgetTester tester,
   ) async {

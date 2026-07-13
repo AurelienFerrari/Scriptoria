@@ -45,6 +45,7 @@ class _RoomHomePageState extends State<RoomHomePage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          tooltip: 'Retour',
           onPressed: () {
             Navigator.of(context).pop(); // Retour à la home page
           },
@@ -67,11 +68,13 @@ class _RoomHomePageState extends State<RoomHomePage> {
                   borderRadius: BorderRadius.circular(24),
                   color: Colors.grey.shade900,
                 ),
+                // Décorative : le nom de la room est affiché juste en dessous.
                 child: widget.iconIsAsset
-                    ? Image.asset(widget.iconPath!, fit: BoxFit.cover)
+                    ? Image.asset(widget.iconPath!, fit: BoxFit.cover, excludeFromSemantics: true)
                     : Image.file(
                         File(widget.iconPath!),
                         fit: BoxFit.cover,
+                        excludeFromSemantics: true,
                       ),
               ),
             Text(

@@ -32,4 +32,18 @@ void main() {
 
     expect(find.text('Sélectionne une icône !'), findsOneWidget);
   });
+
+  testWidgets('RoomCreatePage : le sélecteur d\'icônes propose des icônes nommées', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: RoomCreatePage()));
+
+    await tester.tap(find.byIcon(Icons.add_a_photo));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choisir une icône (PNG carré 96x96)'), findsOneWidget);
+    expect(find.bySemanticsLabel('Icône Dragon'), findsOneWidget);
+    expect(find.bySemanticsLabel('Icône Mystère'), findsOneWidget);
+    expect(find.bySemanticsLabel('Importer une image depuis la galerie'), findsOneWidget);
+  });
 }

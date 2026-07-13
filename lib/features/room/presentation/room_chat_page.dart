@@ -32,6 +32,7 @@ class _RoomChatPageState extends State<RoomChatPage> {
         title: const Text('Chat de la room'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          tooltip: 'Retour',
           onPressed: () {
             // On revient à l'accueil de la room (onglet 0)
             Navigator.of(context).pop();
@@ -83,6 +84,7 @@ class _RoomChatPageState extends State<RoomChatPage> {
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.send, color: Color(0xFF6FE3E1)),
+                  tooltip: 'Envoyer le message',
                   onPressed: _sendMessage,
                 ),
               ],

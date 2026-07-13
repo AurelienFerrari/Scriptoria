@@ -25,16 +25,20 @@ class GalleryGrid extends StatelessWidget {
   }
 
   Widget _buildAddButton(BuildContext context) {
-    return GestureDetector(
-      onTap: onAddImage,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey[800],
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white24),
-        ),
-        child: const Center(
-          child: Icon(Icons.add, color: Colors.white, size: 36),
+    return Semantics(
+      button: true,
+      label: 'Ajouter une image',
+      child: GestureDetector(
+        onTap: onAddImage,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[800],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: const Center(
+            child: Icon(Icons.add, color: Colors.white, size: 36),
+          ),
         ),
       ),
     );
@@ -76,6 +80,7 @@ class GalleryGrid extends StatelessWidget {
                       left: 16,
                       child: IconButton(
                         icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
+                        tooltip: 'Fermer',
                         onPressed: () {
                           Navigator.of(context).pop();
                         },
@@ -87,6 +92,7 @@ class GalleryGrid extends StatelessWidget {
                       right: 16,
                       child: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red, size: 32),
+                        tooltip: 'Supprimer l\'image',
                         onPressed: () {
                           onDeleteImage(controller.page?.round() ?? initialIndex);
                           Navigator.of(context).pop();
