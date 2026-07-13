@@ -11,7 +11,7 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: Row(
           children: [
-            Image.asset('assets/images/logo.png', height: 40),
+            Image.asset('assets/images/logo.png', height: 40, excludeFromSemantics: true),
             const SizedBox(width: 12),
             const Text('Accueil'),
           ],
@@ -19,13 +19,17 @@ class HomePage extends StatelessWidget {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: GestureDetector(
-              onTap: () {
-                Navigator.pushNamed(context, '/profile');
-              },
-              child: CircleAvatar(
-                backgroundColor: Colors.grey[800],
-                child: const Icon(Icons.person_outline),
+            child: Semantics(
+              button: true,
+              label: 'Voir le profil',
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/profile');
+                },
+                child: CircleAvatar(
+                  backgroundColor: Colors.grey[800],
+                  child: const Icon(Icons.person_outline),
+                ),
               ),
             ),
           ),

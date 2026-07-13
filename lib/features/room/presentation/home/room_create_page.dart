@@ -21,10 +21,10 @@ class _RoomCreatePageState extends State<RoomCreatePage> {
   XFile? _pickedFile;
 
   Future<void> _pickIcon() async {
-    final List<String> demoIcons = [
-      'assets/images/dragon.png',
-      'assets/images/mystery.png',
-    ];
+    final Map<String, String> demoIcons = {
+      'assets/images/dragon.png': 'Icône Dragon',
+      'assets/images/mystery.png': 'Icône Mystère',
+    };
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -35,18 +35,25 @@ class _RoomCreatePageState extends State<RoomCreatePage> {
             spacing: 16,
             runSpacing: 16,
             children: [
-              ...demoIcons.map((icon) => GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _iconPath = icon;
-                    _iconIsAsset = true;
-                    _pickedFile = null;
-                  });
-                  Navigator.pop(context);
-                },
-                child: Image.asset(icon, width: 64, height: 64),
+              ...demoIcons.entries.map((entry) => Semantics(
+                button: true,
+                label: entry.value,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _iconPath = entry.key;
+                      _iconIsAsset = true;
+                      _pickedFile = null;
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: Image.asset(entry.key, width: 64, height: 64, excludeFromSemantics: true),
+                ),
               )),
-              GestureDetector(
+              Semantics(
+                button: true,
+                label: 'Importer une image depuis la galerie',
+                child: GestureDetector(
                 onTap: () async {
                   bool granted = false;
                   if (kIsWeb) {
@@ -98,6 +105,7 @@ class _RoomCreatePageState extends State<RoomCreatePage> {
                     border: Border.all(color: Colors.grey),
                   ),
                   child: const Icon(Icons.upload_file, color: Colors.white70, size: 32),
+                ),
                 ),
               ),
             ],
@@ -166,7 +174,7 @@ class _RoomCreatePageState extends State<RoomCreatePage> {
                                         errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.red),
                                       ),
                           )
-                        : const Center(child: Icon(Icons.add_a_photo, size: 36, color: Colors.white38)),
+                        : const Center(child: Icon(Icons.add_a_photo, size: 36, color: Colors.white54)),
                     ),
                   ),
                   const SizedBox(width: 16),

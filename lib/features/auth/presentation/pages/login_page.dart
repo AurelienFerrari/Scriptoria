@@ -162,8 +162,8 @@ class _LoginPageState extends State<LoginPage> {
                   keyboardType: TextInputType.emailAddress,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: 'Email',
-                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                    labelText: 'Email',
+                    labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
                     prefixIcon: const Icon(Icons.email_outlined, color: primaryColor),
                     filled: true,
                     fillColor: cardColor,
@@ -184,14 +184,15 @@ class _LoginPageState extends State<LoginPage> {
                   obscureText: _obscurePassword,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: 'Mot de passe',
-                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                    labelText: 'Mot de passe',
+                    labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
                     prefixIcon: const Icon(Icons.lock_outlined, color: primaryColor),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Icons.visibility_off : Icons.visibility,
                         color: primaryColor,
                       ),
+                      tooltip: _obscurePassword ? 'Afficher le mot de passe' : 'Masquer le mot de passe',
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
                       },

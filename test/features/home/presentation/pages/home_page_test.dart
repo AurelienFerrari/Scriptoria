@@ -20,4 +20,12 @@ void main() {
     expect(find.text('Créer une room'), findsOneWidget);
     expect(find.text('Rejoindre une room'), findsOneWidget);
   });
+
+  testWidgets('HomePage : l\'avatar de profil a un nom accessible', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: HomePage()));
+
+    expect(find.bySemanticsLabel('Voir le profil'), findsOneWidget);
+  });
 }

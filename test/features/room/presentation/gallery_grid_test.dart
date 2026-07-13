@@ -22,6 +22,7 @@ void main() {
     );
 
     expect(find.byIcon(Icons.add), findsOneWidget);
+    expect(find.bySemanticsLabel('Ajouter une image'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.add));
     expect(addCalled, isTrue);

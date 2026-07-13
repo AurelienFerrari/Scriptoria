@@ -33,6 +33,8 @@ class CampaignCard extends StatelessWidget {
                   width: 80,
                   height: 80,
                   fit: BoxFit.cover,
+                  // Décorative : le titre affiché juste à côté porte déjà l'information.
+                  excludeFromSemantics: true,
                 ),
               ),
               const SizedBox(width: 16),
