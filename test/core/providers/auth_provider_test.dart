@@ -97,4 +97,46 @@ void main() {
     expect(profile, {'username': 'demo'});
     verify(() => mockSupabaseService.getUserProfile('user-1')).called(1);
   });
+
+  test('resetPassword délègue à SupabaseService', () async {
+    when(() => mockSupabaseService.resetPassword('demo@scriptoria.fr')).thenAnswer((_) async {});
+
+    await authProvider.resetPassword('demo@scriptoria.fr');
+
+    verify(() => mockSupabaseService.resetPassword('demo@scriptoria.fr')).called(1);
+  });
+
+  test('createCampaign délègue à SupabaseService', () async {
+    when(
+      () => mockSupabaseService.createCampaign(
+        creatorId: 'user-1',
+        title: 'Ma room',
+        description: 'Une description',
+        iconUrl: 'assets/images/dragon.png',
+        maxPlayers: 4,
+        joinCode: 'ABC123',
+      ),
+    ).thenAnswer((_) async => {'id': 'campaign-1'});
+
+    final campaign = await authProvider.createCampaign(
+      creatorId: 'user-1',
+      title: 'Ma room',
+      description: 'Une description',
+      iconUrl: 'assets/images/dragon.png',
+      maxPlayers: 4,
+      joinCode: 'ABC123',
+    );
+
+    expect(campaign, {'id': 'campaign-1'});
+  });
+
+  test('getCampaignByJoinCode délègue à SupabaseService', () async {
+    when(
+      () => mockSupabaseService.getCampaignByJoinCode('ABC123'),
+    ).thenAnswer((_) async => {'id': 'campaign-1'});
+
+    final campaign = await authProvider.getCampaignByJoinCode('ABC123');
+
+    expect(campaign, {'id': 'campaign-1'});
+  });
 }

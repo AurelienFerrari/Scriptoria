@@ -50,4 +50,30 @@ class AuthProvider extends ChangeNotifier {
   Future<Map<String, dynamic>?> getUserProfile(String userId) {
     return _supabaseService.getUserProfile(userId);
   }
+
+  Future<void> resetPassword(String email) {
+    return _supabaseService.resetPassword(email);
+  }
+
+  Future<Map<String, dynamic>> createCampaign({
+    required String creatorId,
+    required String title,
+    required String description,
+    String? iconUrl,
+    required int maxPlayers,
+    required String joinCode,
+  }) {
+    return _supabaseService.createCampaign(
+      creatorId: creatorId,
+      title: title,
+      description: description,
+      iconUrl: iconUrl,
+      maxPlayers: maxPlayers,
+      joinCode: joinCode,
+    );
+  }
+
+  Future<Map<String, dynamic>?> getCampaignByJoinCode(String joinCode) {
+    return _supabaseService.getCampaignByJoinCode(joinCode);
+  }
 }

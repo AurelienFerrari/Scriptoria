@@ -343,6 +343,44 @@ class SupabaseService {
     }
   }
 
+  /// Crée une campagne (room) et renvoie la ligne créée
+  Future<Map<String, dynamic>> createCampaign({
+    required String creatorId,
+    required String title,
+    required String description,
+    String? iconUrl,
+    required int maxPlayers,
+    required String joinCode,
+  }) async {
+    final response = await _client
+        .from('campaigns')
+        .insert({
+          'creator_id': creatorId,
+          'title': title,
+          'description': description,
+          'icon_url': iconUrl,
+          'max_players': maxPlayers,
+          'join_code': joinCode,
+        })
+        .select()
+        .single();
+    return response;
+  }
+
+  /// Recherche une campagne par son code d'invitation
+  Future<Map<String, dynamic>?> getCampaignByJoinCode(String joinCode) async {
+    try {
+      final response = await _client
+          .from('campaigns')
+          .select()
+          .eq('join_code', joinCode)
+          .maybeSingle();
+      return response;
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Récupérer les personnages d'un utilisateur
   Future<List<Map<String, dynamic>>> getUserCharacters(String userId) async {
     try {
