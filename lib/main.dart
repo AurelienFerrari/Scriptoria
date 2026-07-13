@@ -7,8 +7,10 @@ import 'features/room/presentation/shell/room_shell.dart';
 import 'features/room/presentation/home/room_create_page.dart';
 import 'features/room/presentation/home/room_join_page.dart';
 import 'features/profile/presentation/pages/profile_page.dart';
+import 'features/settings/presentation/pages/settings_page.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/register_page.dart';
+import 'features/auth/presentation/pages/forgot_password_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -79,10 +81,12 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomePage(),
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
+        '/forgot-password': (context) => const ForgotPasswordPage(),
         '/room': (context) => const RoomShell(roomId: 'demo'),
         '/CreationRoom': (context) => const RoomCreatePage(),
         '/JoinRoom': (context) => const RoomJoinPage(),
         '/profile': (context) => const ProfilePage(),
+        '/settings': (context) => const SettingsPage(),
       },
     );
   }

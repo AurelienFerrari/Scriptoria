@@ -124,7 +124,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             icon: const Icon(Icons.settings, color: Colors.white70),
             tooltip: 'Paramètres',
             onPressed: () {
-              // TODO: Naviguer vers les paramètres
+              Navigator.pushNamed(context, '/settings');
             },
           ),
         ],

@@ -2,8 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
+import 'dart:math';
 import 'dart:typed_data';
 import 'dart:io';
+
+import 'package:scriptoria/core/providers/auth_provider.dart';
+import 'package:scriptoria/core/utils/friendly_auth_error.dart';
+import 'package:scriptoria/features/room/presentation/shell/room_shell.dart';
+
+/// Code d'invitation lisible (sans 0/O/1/I, souvent confondus).
+String generateJoinCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  final rand = Random();
+  return List.generate(6, (_) => chars[rand.nextInt(chars.length)]).join();
+}
 
 class RoomCreatePage extends StatefulWidget {
   const RoomCreatePage({Key? key}) : super(key: key);
@@ -14,11 +27,57 @@ class RoomCreatePage extends StatefulWidget {
 
 class _RoomCreatePageState extends State<RoomCreatePage> {
   final _formKey = GlobalKey<FormState>();
+  final _roomNameController = TextEditingController();
+  final _descriptionController = TextEditingController();
   int _nbPlayers = 4;
   String? _iconPath; // Chemin local de l'icône
   bool _iconIsAsset = true;
+  bool _isSubmitting = false;
 
   XFile? _pickedFile;
+
+  @override
+  void dispose() {
+    _roomNameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _createRoom() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_iconPath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sélectionne une icône !')));
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final currentUser = context.read<AuthProvider>().currentUser;
+      final campaign = await context.read<AuthProvider>().createCampaign(
+            creatorId: currentUser!.id,
+            title: _roomNameController.text.trim(),
+            description: _descriptionController.text.trim(),
+            iconUrl: _iconIsAsset ? _iconPath : null,
+            maxPlayers: _nbPlayers,
+            joinCode: generateJoinCode(),
+          );
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => RoomShell(roomId: campaign['id'] as String)),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyAuthErrorMessage(e))),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
 
   Future<void> _pickIcon() async {
     final Map<String, String> demoIcons = {
@@ -130,6 +189,7 @@ class _RoomCreatePageState extends State<RoomCreatePage> {
               const Text('Nom de la room', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               const SizedBox(height: 10),
               TextFormField(
+                controller: _roomNameController,
                 decoration: const InputDecoration(
                   hintText: 'Ex: Mystères de l\'Ombre',
                   border: OutlineInputBorder(),
@@ -188,6 +248,7 @@ class _RoomCreatePageState extends State<RoomCreatePage> {
               const Text('Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               const SizedBox(height: 10),
               TextFormField(
+                controller: _descriptionController,
                 minLines: 2,
                 maxLines: 4,
                 decoration: const InputDecoration(
@@ -220,17 +281,14 @@ class _RoomCreatePageState extends State<RoomCreatePage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate() && _iconPath != null) {
-                      _formKey.currentState!.save();
-                      // Ici tu peux traiter la création de la room avec _roomName, _iconPath, _description, _nbPlayers
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Room créée !')));
-                      Navigator.pop(context);
-                    } else if (_iconPath == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sélectionne une icône !')));
-                    }
-                  },
-                  child: const Text('Créer'),
+                  onPressed: _isSubmitting ? null : _createRoom,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Créer'),
                 ),
               ),
             ],
