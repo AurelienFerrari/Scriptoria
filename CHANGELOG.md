@@ -4,6 +4,32 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.2.0] - 2026-07-13
+
+### Ajouté
+- Architecture Provider généralisée : `AuthProvider` centralise l'authentification
+  et l'accès au profil, `ProfilePage` ne dépend plus directement de `SupabaseService`
+- Couverture de tests étendue à 67,8% du code exécutable de `lib/` (57 tests unitaires
+  et widgets), avec un seuil minimal de 50% imposé en CI
+- Accessibilité (référentiel RGAA) : noms accessibles sur tous les boutons à icône
+  seule, distinction images décoratives/informatives, contrastes vérifiés et corrigés
+  — voir `ACCESSIBILITE.md`
+- Cahier de recettes (`CAHIER_DE_RECETTES.md`) et plan de correction des bogues
+  (`PLAN_CORRECTION_BOGUES.md`)
+- Manuels de déploiement, d'utilisation et de mise à jour
+- Fichiers de migration SQL versionnés dans `supabase/migrations/` (le schéma
+  n'existait auparavant que dans le projet Supabase, jamais dans le dépôt)
+
+### Corrigé
+- Méthode de calcul de la couverture de tests (division par le nombre brut de
+  lignes au lieu des lignes exécutables identifiées par l'outil de couverture),
+  qui plafonnait le pourcentage artificiellement bien avant 50%
+- `_loadUserProfile()` appelait le Navigator de façon synchrone pendant
+  `initState()`, ce qui plantait pour un utilisateur non connecté ouvrant son profil
+- Build APK cassé en CI : version de NDK figée en dur, remplacée par
+  `flutter.ndkVersion` (déjà en cache, plus de téléchargement)
+- Deux icônes sous le seuil de contraste WCAG de 3:1
+
 ## [0.1.0] - 2026-07-04
 
 Première version suivie sous ce schéma de versioning. Le `1.0.0+1` initial
