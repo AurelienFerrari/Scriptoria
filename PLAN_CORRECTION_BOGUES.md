@@ -18,19 +18,21 @@ CI) et leur statut. Les IDs sont référencés depuis le [cahier de recettes](CA
 | B09 | Deux icônes sous le seuil de contraste WCAG de 3:1 (`white30` à 2.70:1, `white38` à 2.60:1) | Mineure (accessibilité) | Calcul systématique des contrastes de la palette | Relevées à `white54` (4.46:1 et 4.66:1) |
 | B10 | Mot de passe accepté dès 6 caractères (sous la recommandation OWASP/NIST de 8) | Mineure (sécurité) | Revue de code | Seuil relevé à 8 caractères |
 | B11 | Warnings d'analyse statique : imports dupliqués (`room_tools_page.dart`), imports inutilisés (`room_shell.dart`, `main.dart`), champs de formulaire assignés mais jamais lus (`room_create_page.dart`, `room_join_page.dart`), comparaison null devenue impossible (`supabase_service.dart`) | Mineure | `flutter analyze` en CI | Nettoyage du code — commit `9358aa2` |
+| B12 | Le lien « Mot de passe oublié ? » de `LoginPage` pointait vers la route `/forgot-password`, jamais déclarée dans `main.dart` | Majeure | Cahier de recettes (R05) | Nouvel écran `ForgotPasswordPage` (appelle `AuthProvider.resetPassword`, déjà présent côté service mais jamais exposé) + route ajoutée — commit `83ee877` |
+| B13 | `RoomCreatePage` ne persistait rien : le bouton « Créer » affichait un SnackBar puis revenait en arrière, sans écrire dans `campaigns` | Majeure | Cahier de recettes (R18) | `SupabaseService.createCampaign()` + génération d'un code d'invitation, navigation vers `RoomShell` avec l'id réel créé — commit `83ee877` |
+| B14 | `RoomJoinPage` acceptait n'importe quel code non vide | Majeure | Cahier de recettes (R20) | `SupabaseService.getCampaignByJoinCode()` vérifie réellement le code contre `campaigns` avant de rejoindre — commit `83ee877` |
+| B16 | `SettingsPage` existait mais n'était référencée dans aucune route | Mineure | Cahier de recettes (R28) | Route `/settings` ajoutée, icône Paramètres de `ProfilePage` branchée dessus — commit `83ee877` |
 
 ## Connus, pas encore corrigés
 
 | ID | Bogue | Gravité | Constat |
 |---|---|---|---|
-| B12 | Le lien « Mot de passe oublié ? » de `LoginPage` pointe vers la route `/forgot-password`, jamais déclarée dans `main.dart` : la navigation échoue (aucun écran de récupération de mot de passe n'existe) | Majeure | Fonctionnalité annoncée à l'utilisateur mais non implémentée |
-| B13 | `RoomCreatePage` ne persiste rien : le bouton « Créer » affiche un SnackBar « Room créée ! » puis revient en arrière, sans appeler Supabase ni écrire dans la table `campaigns` | Majeure | Fonctionnalité vitrine, non branchée au backend |
-| B14 | `RoomJoinPage` accepte n'importe quel code non vide (« Bon code » systématique) : aucune vérification contre une vraie room existante | Majeure | Même cause que B13 — le flux de jointure n'est pas branché au backend |
-| B15 | `SupabaseService.uploadImage()` appelle `_readFile()`, qui lève `UnimplementedError` : toute tentative d'upload d'image plante | Majeure | Fonctionnalité de stockage jamais terminée |
-| B16 | `SettingsPage` existe mais n'est référencée dans aucune route de `main.dart` : écran mort, inaccessible depuis l'app | Mineure | Code orphelin |
+| B15 | `SupabaseService.uploadImage()` appelle `_readFile()`, qui lève `UnimplementedError` : toute tentative d'upload d'image plante | Majeure | Fonctionnalité de stockage jamais terminée. Conséquence directe : créer une room avec une image importée depuis la galerie (plutôt qu'une icône de démonstration) enregistre `icon_url = null` plutôt que d'échouer, en attendant que B15 soit traité |
 | B17 | Incohérence de nommage : la campagne « Mystères de l'Ombre » (carte d'accueil) devient « Mystères du Ombre » dans le sous-titre du document associé | Cosmétique | Faute de frappe dans les données de démonstration codées en dur |
+| B18 | `RoomShell` affiche toujours son contenu de démonstration (« Salle du Dragon ») quel que soit l'id de room reçu, y compris pour une vraie room créée via B13 ou rejointe via B14 | Majeure | Constat lors de la correction de B13/B14 : la persistance fonctionne, mais l'écran de la room n'est pas encore data-driven |
 
 ## Priorisation proposée
 
-1. **B12, B13, B14, B15** avant toute démonstration devant un public/jury : ce sont des fonctionnalités visibles dans l'interface qui ne font rien ou plantent — le plus gros risque pour la crédibilité du prototype.
-2. **B16, B17** : cosmétique/hygiène, à corriger quand le temps le permet, sans urgence.
+1. **B18** est maintenant le plus gros écart visible : la création/jointure de room fonctionne réellement côté données, mais l'utilisateur ne le voit pas à l'écran — prioritaire avant toute démonstration.
+2. **B15** : nécessaire pour que la personnalisation d'une room avec une image importée soit complète.
+3. **B17** : cosmétique/hygiène, sans urgence.

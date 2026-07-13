@@ -17,7 +17,7 @@ Légende : ✅ conforme · ❌ non conforme (bogue, voir [PLAN_CORRECTION_BOGUES
 | R02 | Se connecter avec les champs vides | Message « Veuillez remplir tous les champs » | ✅ | `widget_test.dart` : *LoginPage refuse la connexion si les champs sont vides* |
 | R03 | Se connecter avec un email/mot de passe invalide | Message clair « Email ou mot de passe incorrect » (pas le code d'erreur brut Supabase) | ✅ | `friendly_auth_error_test.dart` : *traduit le code "invalid_credentials"* |
 | R04 | Cliquer sur l'œil du champ mot de passe | Affiche/masque le mot de passe, tooltip présent pour un lecteur d'écran | ✅ | `widget_test.dart` : *le champ email a un label persistant et le bouton œil un nom accessible* |
-| R05 | Cliquer sur « Mot de passe oublié ? » | Un écran de récupération de mot de passe s'affiche | ❌ B12 | Route `/forgot-password` non déclarée — vérifié par lecture de code |
+| R05 | Cliquer sur « Mot de passe oublié ? » | Un écran de récupération de mot de passe s'affiche | ✅ | `main_test.dart` : *MyApp résout les routes nommées /settings et /forgot-password* ; `forgot_password_page_test.dart` |
 | R06 | Ouvrir l'écran d'inscription | Titre, 5 champs (email, pseudo, nom affiché, mot de passe, confirmation), bouton « S'inscrire » | ✅ | `register_page_test.dart` : *RegisterPage affiche le titre, les champs et le bouton d'inscription* |
 | R07 | S'inscrire avec les champs vides | Message « Veuillez remplir tous les champs » | ✅ | `register_page_test.dart` : *RegisterPage refuse l'inscription si les champs sont vides* |
 | R08 | S'inscrire avec un nom d'utilisateur déjà pris | Message « Ce nom d'utilisateur est déjà pris » | ⚠️ | Logique présente dans le code (`isUsernameAvailable`), non automatisée (nécessite un vrai appel réseau Supabase) — vérifiée manuellement lors de la recréation du schéma |
@@ -45,9 +45,9 @@ Légende : ✅ conforme · ❌ non conforme (bogue, voir [PLAN_CORRECTION_BOGUES
 |---|---|---|---|---|
 | R16 | Créer une room, formulaire vide | Erreurs « Veuillez entrer un nom »/« ...une description » | ✅ | `room_create_page_test.dart` : *affiche les erreurs de validation si le formulaire est vide* |
 | R17 | Créer une room, champs remplis mais sans icône choisie | Message « Sélectionne une icône ! » | ✅ | `room_create_page_test.dart` : *exige une icône même si les champs texte sont remplis* |
-| R18 | Créer une room, tous les champs valides | La room est enregistrée et accessible ensuite | ❌ B13 | Le bouton affiche juste un SnackBar « Room créée ! » sans rien persister — vérifié par lecture de code |
+| R18 | Créer une room, tous les champs valides | La room est enregistrée et accessible ensuite | ✅ | `room_create_page_test.dart` : *RoomCreatePage crée réellement la room et navigue vers RoomShell* — écrit dans `campaigns` avec un code d'invitation généré. ⚠️ Voir B18 : la room ouverte affiche encore un contenu de démonstration, pas ses vraies données |
 | R19 | Rejoindre une room avec un code vide | Message « Veuillez entrer un code » | ✅ | `room_join_page_test.dart` : *RoomJoinPage affiche une erreur si le code est vide* |
-| R20 | Rejoindre une room avec un code invalide/inexistant | Message d'erreur explicite | ❌ B14 | N'importe quel code non vide est accepté (« Bon code » systématique) |
+| R20 | Rejoindre une room avec un code invalide/inexistant | Message d'erreur explicite | ✅ | `room_join_page_test.dart` : *RoomJoinPage affiche une erreur si le code ne correspond à aucune room* |
 
 ## Navigation dans une room
 
@@ -65,10 +65,10 @@ Légende : ✅ conforme · ❌ non conforme (bogue, voir [PLAN_CORRECTION_BOGUES
 
 | # | Scénario | Résultat attendu | Résultat | Preuve |
 |---|---|---|---|---|
-| R28 | Accéder aux paramètres de l'application (pas ceux d'une room) | Écran de paramètres accessible depuis un menu | ❌ B16 | `SettingsPage` existe mais n'est reliée à aucune route — inaccessible depuis l'app |
+| R28 | Accéder aux paramètres de l'application (pas ceux d'une room) | Écran de paramètres accessible depuis un menu | ✅ | `main_test.dart` : *MyApp résout les routes nommées /settings et /forgot-password* |
 
 ## Synthèse
 
-- **23 scénarios conformes** sur 28 (dont la majorité couverte par un test automatisé rejoué à chaque push).
-- **4 non-conformités** : R05 (B12), R18 (B13), R20 (B14), R28 (B16) → voir le plan de correction des bogues, priorisées avant toute démonstration.
+- **27 scénarios conformes** sur 28 (dont la majorité couverte par un test automatisé rejoué à chaque push).
+- **1 réserve** : R18 fonctionne côté données (la room est bien créée) mais l'écran affiché reste un contenu de démonstration (bogue B18, voir le plan de correction).
 - **1 scénario partiellement vérifié** (R08, dépend d'un appel réseau réel non automatisé).
