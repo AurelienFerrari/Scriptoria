@@ -4,6 +4,29 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [Non publié]
+
+### Ajouté
+- `SECURITE.md` : mapping explicite aux 10 catégories de l'OWASP Top 10 2021,
+  avec les limites assumées documentées (pas de 2FA, pas de monitoring
+  centralisé, pas de scan automatique de vulnérabilités des dépendances)
+
+### Corrigé
+- Le lien « Mot de passe oublié ? » de `LoginPage` pointait vers une route
+  jamais déclarée : nouvel écran `ForgotPasswordPage` relié à
+  `AuthProvider.resetPassword` — bogue B12
+- `RoomCreatePage` ne persistait rien : le bouton « Créer » n'écrivait jamais
+  dans `campaigns` ; la création est maintenant réellement enregistrée en
+  base, avec génération d'un code d'invitation — bogue B13
+- `RoomJoinPage` acceptait n'importe quel code non vide ; le code est
+  désormais vérifié contre `campaigns` avant de rejoindre la room — bogue B14
+- `SettingsPage` existait mais n'était référencée dans aucune route ; route
+  `/settings` ajoutée et reliée depuis le profil — bogue B16
+- `RoomShell` affichait un contenu de démonstration codé en dur (« Salle du
+  Dragon ») quel que soit l'id de room reçu ; il charge désormais la vraie
+  campagne depuis Supabase (`SupabaseService.getCampaignById`) et affiche son
+  titre, sa description et sa dernière mise à jour réels — bogue B18
+
 ## [0.2.0] - 2026-07-13
 
 ### Ajouté

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/providers/auth_provider.dart';
 import '../../../../ui/widgets/room_navbar.dart';
 import '../room_home_page.dart';
 import '../room_map_page.dart';
@@ -16,28 +18,76 @@ class RoomShell extends StatefulWidget {
 
 class _RoomShellState extends State<RoomShell> {
   int _tab = 0;
-  final List<Widget> _roomPages = [
-    RoomHomePage(
-      roomName: 'Salle du Dragon',
-      iconPath: 'assets/images/dragon.png',
-      iconIsAsset: true,
-      description: 'Bienvenue dans la salle du Dragon ! Ici, vivez des aventures épiques.',
-      lastUpdate: 'Aujourd’hui à 12:30',
-    ),
-    RoomMapPage(),
-    RoomToolsPage(),
-    RoomChatPage(),
-    RoomSettingsPage(),
-  ];
+  late final Future<Map<String, dynamic>?> _campaignFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _campaignFuture = context.read<AuthProvider>().getCampaignById(widget.roomId);
+  }
+
+  String _formatLastUpdate(String? iso) {
+    if (iso == null) return 'Inconnue';
+    final date = DateTime.tryParse(iso)?.toLocal();
+    if (date == null) return 'Inconnue';
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(date.day)}/${two(date.month)}/${date.year} à ${two(date.hour)}:${two(date.minute)}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _roomPages[_tab],
-      bottomNavigationBar: RoomNavbar(
-        currentIndex: _tab,
-        onTap: (i) => setState(() => _tab = i),
-      ),
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _campaignFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            backgroundColor: Color(0xFF161622),
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final campaign = snapshot.data;
+        if (campaign == null) {
+          return Scaffold(
+            backgroundColor: const Color(0xFF161622),
+            appBar: AppBar(title: const Text('Room introuvable')),
+            body: const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  "Cette room n'existe pas ou plus.",
+                  style: TextStyle(color: Colors.white),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          );
+        }
+
+        final roomPages = <Widget>[
+          RoomHomePage(
+            roomName: campaign['title'] as String? ?? 'Room',
+            iconPath: campaign['icon_url'] as String?,
+            iconIsAsset: true,
+            description: campaign['description'] as String? ?? '',
+            lastUpdate: _formatLastUpdate(
+              (campaign['updated_at'] ?? campaign['created_at']) as String?,
+            ),
+          ),
+          const RoomMapPage(),
+          const RoomToolsPage(),
+          const RoomChatPage(),
+          const RoomSettingsPage(),
+        ];
+
+        return Scaffold(
+          body: roomPages[_tab],
+          bottomNavigationBar: RoomNavbar(
+            currentIndex: _tab,
+            onTap: (i) => setState(() => _tab = i),
+          ),
+        );
+      },
     );
   }
 }

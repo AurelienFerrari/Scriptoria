@@ -76,4 +76,8 @@ class AuthProvider extends ChangeNotifier {
   Future<Map<String, dynamic>?> getCampaignByJoinCode(String joinCode) {
     return _supabaseService.getCampaignByJoinCode(joinCode);
   }
+
+  Future<Map<String, dynamic>?> getCampaignById(String id) {
+    return _supabaseService.getCampaignById(id);
+  }
 }

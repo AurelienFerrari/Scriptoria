@@ -22,6 +22,7 @@ CI) et leur statut. Les IDs sont référencés depuis le [cahier de recettes](CA
 | B13 | `RoomCreatePage` ne persistait rien : le bouton « Créer » affichait un SnackBar puis revenait en arrière, sans écrire dans `campaigns` | Majeure | Cahier de recettes (R18) | `SupabaseService.createCampaign()` + génération d'un code d'invitation, navigation vers `RoomShell` avec l'id réel créé — commit `83ee877` |
 | B14 | `RoomJoinPage` acceptait n'importe quel code non vide | Majeure | Cahier de recettes (R20) | `SupabaseService.getCampaignByJoinCode()` vérifie réellement le code contre `campaigns` avant de rejoindre — commit `83ee877` |
 | B16 | `SettingsPage` existait mais n'était référencée dans aucune route | Mineure | Cahier de recettes (R28) | Route `/settings` ajoutée, icône Paramètres de `ProfilePage` branchée dessus — commit `83ee877` |
+| B18 | `RoomShell` affichait toujours son contenu de démonstration (« Salle du Dragon ») quel que soit l'id de room reçu, y compris pour une vraie room créée via B13 ou rejointe via B14 | Majeure | Cahier de recettes (R18/R21) | `SupabaseService.getCampaignById()` + `AuthProvider.getCampaignById()` : `RoomShell` charge désormais la vraie campagne depuis `campaigns` via son `roomId` et affiche son titre/description/dernière mise à jour réels (au lieu du contenu codé en dur), avec un écran « room introuvable » si l'id ne correspond à aucune campagne |
 
 ## Connus, pas encore corrigés
 
@@ -29,10 +30,8 @@ CI) et leur statut. Les IDs sont référencés depuis le [cahier de recettes](CA
 |---|---|---|---|
 | B15 | `SupabaseService.uploadImage()` appelle `_readFile()`, qui lève `UnimplementedError` : toute tentative d'upload d'image plante | Majeure | Fonctionnalité de stockage jamais terminée. Conséquence directe : créer une room avec une image importée depuis la galerie (plutôt qu'une icône de démonstration) enregistre `icon_url = null` plutôt que d'échouer, en attendant que B15 soit traité |
 | B17 | Incohérence de nommage : la campagne « Mystères de l'Ombre » (carte d'accueil) devient « Mystères du Ombre » dans le sous-titre du document associé | Cosmétique | Faute de frappe dans les données de démonstration codées en dur |
-| B18 | `RoomShell` affiche toujours son contenu de démonstration (« Salle du Dragon ») quel que soit l'id de room reçu, y compris pour une vraie room créée via B13 ou rejointe via B14 | Majeure | Constat lors de la correction de B13/B14 : la persistance fonctionne, mais l'écran de la room n'est pas encore data-driven |
 
 ## Priorisation proposée
 
-1. **B18** est maintenant le plus gros écart visible : la création/jointure de room fonctionne réellement côté données, mais l'utilisateur ne le voit pas à l'écran — prioritaire avant toute démonstration.
-2. **B15** : nécessaire pour que la personnalisation d'une room avec une image importée soit complète.
-3. **B17** : cosmétique/hygiène, sans urgence.
+1. **B15** : nécessaire pour que la personnalisation d'une room avec une image importée soit complète.
+2. **B17** : cosmétique/hygiène, sans urgence.

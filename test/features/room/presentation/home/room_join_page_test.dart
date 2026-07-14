@@ -55,6 +55,9 @@ void main() {
     when(() => mockSupabaseService.getCampaignByJoinCode('X7K2P9')).thenAnswer(
       (_) async => {'id': 'campaign-1', 'title': 'Mystères de l\'Ombre'},
     );
+    when(() => mockSupabaseService.getCampaignById('campaign-1')).thenAnswer(
+      (_) async => {'id': 'campaign-1', 'title': 'Mystères de l\'Ombre'},
+    );
 
     await tester.pumpWidget(_wrap(authProvider));
     await tester.enterText(find.byType(TextFormField), 'x7k2p9');
