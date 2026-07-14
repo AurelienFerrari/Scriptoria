@@ -45,7 +45,7 @@ Légende : ✅ conforme · ❌ non conforme (bogue, voir [PLAN_CORRECTION_BOGUES
 |---|---|---|---|---|
 | R16 | Créer une room, formulaire vide | Erreurs « Veuillez entrer un nom »/« ...une description » | ✅ | `room_create_page_test.dart` : *affiche les erreurs de validation si le formulaire est vide* |
 | R17 | Créer une room, champs remplis mais sans icône choisie | Message « Sélectionne une icône ! » | ✅ | `room_create_page_test.dart` : *exige une icône même si les champs texte sont remplis* |
-| R18 | Créer une room, tous les champs valides | La room est enregistrée et accessible ensuite | ✅ | `room_create_page_test.dart` : *RoomCreatePage crée réellement la room et navigue vers RoomShell* — écrit dans `campaigns` avec un code d'invitation généré. ⚠️ Voir B18 : la room ouverte affiche encore un contenu de démonstration, pas ses vraies données |
+| R18 | Créer une room, tous les champs valides | La room est enregistrée et accessible ensuite, avec ses vraies données affichées | ✅ | `room_create_page_test.dart` : *RoomCreatePage crée réellement la room et navigue vers RoomShell* — écrit dans `campaigns` avec un code d'invitation généré ; `room_shell_test.dart` : *RoomShell affiche les vraies données de la room* (B18 corrigé) |
 | R19 | Rejoindre une room avec un code vide | Message « Veuillez entrer un code » | ✅ | `room_join_page_test.dart` : *RoomJoinPage affiche une erreur si le code est vide* |
 | R20 | Rejoindre une room avec un code invalide/inexistant | Message d'erreur explicite | ✅ | `room_join_page_test.dart` : *RoomJoinPage affiche une erreur si le code ne correspond à aucune room* |
 
@@ -53,7 +53,7 @@ Légende : ✅ conforme · ❌ non conforme (bogue, voir [PLAN_CORRECTION_BOGUES
 
 | # | Scénario | Résultat attendu | Résultat | Preuve |
 |---|---|---|---|---|
-| R21 | Ouvrir une room | Page d'accueil de la room (nom, description, galerie) affichée par défaut | ✅ | `room_shell_test.dart` / `room_home_page_test.dart` |
+| R21 | Ouvrir une room | Page d'accueil de la room affichée par défaut, avec le nom, la description et la dernière mise à jour réels de la campagne (chargés depuis `campaigns` via son id), pas un contenu de démonstration | ✅ | `room_shell_test.dart` : *RoomShell affiche les vraies données de la room et change de page au tap* / `room_home_page_test.dart` |
 | R22 | Onglet « Chat » | Passe à l'écran de chat de la room | ✅ | `room_shell_test.dart` : *change de page au tap* |
 | R23 | Onglet « Paramètres » | Passe aux paramètres de la room | ✅ | `room_shell_test.dart` |
 | R24 | Onglet « Outils » | Liste des 3 outils (Dé, Frise, Relations) | ✅ | `room_tools_page_test.dart` |
@@ -70,5 +70,4 @@ Légende : ✅ conforme · ❌ non conforme (bogue, voir [PLAN_CORRECTION_BOGUES
 ## Synthèse
 
 - **27 scénarios conformes** sur 28 (dont la majorité couverte par un test automatisé rejoué à chaque push).
-- **1 réserve** : R18 fonctionne côté données (la room est bien créée) mais l'écran affiché reste un contenu de démonstration (bogue B18, voir le plan de correction).
 - **1 scénario partiellement vérifié** (R08, dépend d'un appel réseau réel non automatisé).

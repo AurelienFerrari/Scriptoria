@@ -79,6 +79,9 @@ void main() {
         joinCode: any(named: 'joinCode'),
       ),
     ).thenAnswer((_) async => {'id': 'campaign-1', 'title': 'Mystères de l\'Ombre'});
+    when(() => mockSupabaseService.getCampaignById('campaign-1')).thenAnswer(
+      (_) async => {'id': 'campaign-1', 'title': 'Mystères de l\'Ombre'},
+    );
 
     await tester.pumpWidget(
       ChangeNotifierProvider.value(

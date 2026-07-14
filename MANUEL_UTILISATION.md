@@ -17,10 +17,9 @@ des cartes et discuter avec son groupe.
 
 Renseigner l'email et le mot de passe sur l'écran de connexion. En cas
 d'erreur, un message explicite s'affiche (identifiants incorrects, email non
-confirmé, etc.) plutôt qu'un message technique.
-
-> Le lien « Mot de passe oublié ? » n'est pas encore fonctionnel dans cette
-> version (voir [PLAN_CORRECTION_BOGUES.md](PLAN_CORRECTION_BOGUES.md), bogue B12).
+confirmé, etc.) plutôt qu'un message technique. Le lien « Mot de passe
+oublié ? » ouvre un écran de récupération qui déclenche l'envoi d'un email de
+réinitialisation via Supabase Auth.
 
 ## Écran d'accueil
 
@@ -37,17 +36,15 @@ profil.
    soit importer une image depuis sa galerie (une icône est obligatoire).
 4. Choisir le nombre de joueurs (2 à 10, ou illimité) puis valider.
 
-> Dans cette version, la création n'enregistre pas encore la room de façon
-> persistante (voir bogue B13) — l'écran de démonstration est fonctionnel
-> mais la donnée n'est pas conservée après validation.
+La room est enregistrée en base avec un code d'invitation généré
+automatiquement, et l'écran qui s'ouvre ensuite affiche ses vraies données
+(nom, description, dernière mise à jour).
 
 ## Rejoindre une room
 
 Depuis l'accueil, **Rejoindre une room** puis saisir le code fourni par le
-maître de jeu.
-
-> Dans cette version, n'importe quel code non vide est accepté (voir bogue
-> B14) : la vérification du code réel n'est pas encore branchée.
+maître de jeu. Le code est vérifié contre les rooms existantes ; un message
+d'erreur explicite s'affiche s'il ne correspond à aucune room.
 
 ## Naviguer dans une room
 

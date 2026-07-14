@@ -71,6 +71,9 @@ void main() {
   ) async {
     final mockSupabaseService = MockSupabaseService();
     when(() => mockSupabaseService.getCurrentUser()).thenReturn(null);
+    when(() => mockSupabaseService.getCampaignById('demo')).thenAnswer(
+      (_) async => {'id': 'demo', 'title': 'Room de démo'},
+    );
 
     await tester.pumpWidget(
       ChangeNotifierProvider(

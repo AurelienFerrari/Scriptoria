@@ -367,6 +367,20 @@ class SupabaseService {
     return response;
   }
 
+  /// Récupère une campagne (room) par son id
+  Future<Map<String, dynamic>?> getCampaignById(String id) async {
+    try {
+      final response = await _client
+          .from('campaigns')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
+      return response;
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Recherche une campagne par son code d'invitation
   Future<Map<String, dynamic>?> getCampaignByJoinCode(String joinCode) async {
     try {
