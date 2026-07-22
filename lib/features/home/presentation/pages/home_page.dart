@@ -76,7 +76,7 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 16),
             DocumentListItem(
               title: 'Carte du Royaume',
-              subtitle: 'Mystères du Ombre',
+              subtitle: 'Mystères de l\'Ombre',
               lastModified: 'il y a 1 jour',
               onTap: () {},
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_service.dart';
 
@@ -79,5 +80,13 @@ class AuthProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>?> getCampaignById(String id) {
     return _supabaseService.getCampaignById(id);
+  }
+
+  Future<String?> uploadImage({
+    required XFile file,
+    required String bucket,
+    required String fileName,
+  }) {
+    return _supabaseService.uploadImage(file: file, bucket: bucket, fileName: fileName);
   }
 }

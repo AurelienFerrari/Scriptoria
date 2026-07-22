@@ -26,6 +26,16 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   Dragon ») quel que soit l'id de room reçu ; il charge désormais la vraie
   campagne depuis Supabase (`SupabaseService.getCampaignById`) et affiche son
   titre, sa description et sa dernière mise à jour réels — bogue B18
+- `SupabaseService.uploadImage()` levait `UnimplementedError` : toute
+  tentative d'upload d'image plantait. Réécrit pour lire les octets d'un
+  `XFile` (image_picker) de façon cross-platform, et branché dans
+  `RoomCreatePage` : une icône importée depuis la galerie est désormais
+  réellement uploadée vers le bucket `images`, son URL publique devenant
+  `icon_url` de la room (affichée via `Image.network` dans `RoomHomePage`) —
+  bogue B15
+- Incohérence de nommage dans les données de démonstration (« Mystères du
+  Ombre » au lieu de « Mystères de l'Ombre » dans le sous-titre d'un
+  document de l'accueil) — bogue B17
 
 ## [0.2.0] - 2026-07-13
 

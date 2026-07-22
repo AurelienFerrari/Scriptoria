@@ -23,15 +23,9 @@ CI) et leur statut. Les IDs sont référencés depuis le [cahier de recettes](CA
 | B14 | `RoomJoinPage` acceptait n'importe quel code non vide | Majeure | Cahier de recettes (R20) | `SupabaseService.getCampaignByJoinCode()` vérifie réellement le code contre `campaigns` avant de rejoindre — commit `83ee877` |
 | B16 | `SettingsPage` existait mais n'était référencée dans aucune route | Mineure | Cahier de recettes (R28) | Route `/settings` ajoutée, icône Paramètres de `ProfilePage` branchée dessus — commit `83ee877` |
 | B18 | `RoomShell` affichait toujours son contenu de démonstration (« Salle du Dragon ») quel que soit l'id de room reçu, y compris pour une vraie room créée via B13 ou rejointe via B14 | Majeure | Cahier de recettes (R18/R21) | `SupabaseService.getCampaignById()` + `AuthProvider.getCampaignById()` : `RoomShell` charge désormais la vraie campagne depuis `campaigns` via son `roomId` et affiche son titre/description/dernière mise à jour réels (au lieu du contenu codé en dur), avec un écran « room introuvable » si l'id ne correspond à aucune campagne — commit `40bd364` |
+| B15 | `SupabaseService.uploadImage()` appelait `_readFile()`, qui levait `UnimplementedError` : toute tentative d'upload d'image plantait | Majeure | Fonctionnalité de stockage jamais terminée | `uploadImage()` prend désormais un `XFile` (image_picker) et lit ses octets via `readAsBytes()` — cross-platform, contrairement à `dart:io.File` qui aurait planté sur Flutter Web (même piège que B03). Branché dans `RoomCreatePage` : une icône importée depuis la galerie est réellement uploadée vers le bucket `images` sous `{userId}/room-icons/...` (conforme aux policies RLS déjà en place), et son URL publique devient `icon_url` de la room. `RoomShell`/`RoomHomePage` distinguent une icône de démo (asset) d'une icône uploadée (URL réseau, rendue via `Image.network`) |
+| B17 | Incohérence de nommage : la campagne « Mystères de l'Ombre » (carte d'accueil) devenait « Mystères du Ombre » dans le sous-titre du document associé | Cosmétique | Faute de frappe corrigée dans `HomePage` |
 
 ## Connus, pas encore corrigés
 
-| ID | Bogue | Gravité | Constat |
-|---|---|---|---|
-| B15 | `SupabaseService.uploadImage()` appelle `_readFile()`, qui lève `UnimplementedError` : toute tentative d'upload d'image plante | Majeure | Fonctionnalité de stockage jamais terminée. Conséquence directe : créer une room avec une image importée depuis la galerie (plutôt qu'une icône de démonstration) enregistre `icon_url = null` plutôt que d'échouer, en attendant que B15 soit traité |
-| B17 | Incohérence de nommage : la campagne « Mystères de l'Ombre » (carte d'accueil) devient « Mystères du Ombre » dans le sous-titre du document associé | Cosmétique | Faute de frappe dans les données de démonstration codées en dur |
-
-## Priorisation proposée
-
-1. **B15** : nécessaire pour que la personnalisation d'une room avec une image importée soit complète.
-2. **B17** : cosmétique/hygiène, sans urgence.
+Aucun à ce jour.

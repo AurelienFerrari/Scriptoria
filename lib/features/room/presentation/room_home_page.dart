@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'gallery_grid.dart';
 
 import 'package:image_picker/image_picker.dart';
@@ -71,8 +70,8 @@ class _RoomHomePageState extends State<RoomHomePage> {
                 // Décorative : le nom de la room est affiché juste en dessous.
                 child: widget.iconIsAsset
                     ? Image.asset(widget.iconPath!, fit: BoxFit.cover, excludeFromSemantics: true)
-                    : Image.file(
-                        File(widget.iconPath!),
+                    : Image.network(
+                        widget.iconPath!,
                         fit: BoxFit.cover,
                         excludeFromSemantics: true,
                       ),
