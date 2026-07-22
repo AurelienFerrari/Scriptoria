@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -9,6 +12,10 @@ import '../../helpers/mock_supabase_service.dart';
 void main() {
   late MockSupabaseService mockSupabaseService;
   late AuthProvider authProvider;
+
+  setUpAll(() {
+    registerFallbackValue(XFile(''));
+  });
 
   setUp(() {
     mockSupabaseService = MockSupabaseService();
@@ -138,5 +145,42 @@ void main() {
     final campaign = await authProvider.getCampaignByJoinCode('ABC123');
 
     expect(campaign, {'id': 'campaign-1'});
+  });
+
+  test('getCampaignById délègue à SupabaseService', () async {
+    when(
+      () => mockSupabaseService.getCampaignById('campaign-1'),
+    ).thenAnswer((_) async => {'id': 'campaign-1', 'title': 'Ma room'});
+
+    final campaign = await authProvider.getCampaignById('campaign-1');
+
+    expect(campaign, {'id': 'campaign-1', 'title': 'Ma room'});
+  });
+
+  test('uploadImage délègue à SupabaseService et renvoie l\'URL publique', () async {
+    final file = XFile.fromData(Uint8List.fromList([1, 2, 3]), name: 'icone.jpg');
+    const publicUrl = 'https://xyz.supabase.co/storage/v1/object/public/images/user-1/icone.jpg';
+    when(
+      () => mockSupabaseService.uploadImage(
+        file: file,
+        bucket: 'images',
+        fileName: 'user-1/icone.jpg',
+      ),
+    ).thenAnswer((_) async => publicUrl);
+
+    final url = await authProvider.uploadImage(
+      file: file,
+      bucket: 'images',
+      fileName: 'user-1/icone.jpg',
+    );
+
+    expect(url, publicUrl);
+    verify(
+      () => mockSupabaseService.uploadImage(
+        file: file,
+        bucket: 'images',
+        fileName: 'user-1/icone.jpg',
+      ),
+    ).called(1);
   });
 }

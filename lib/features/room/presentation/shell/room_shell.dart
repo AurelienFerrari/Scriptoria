@@ -64,11 +64,16 @@ class _RoomShellState extends State<RoomShell> {
           );
         }
 
+        final iconUrl = campaign['icon_url'] as String?;
+
         final roomPages = <Widget>[
           RoomHomePage(
             roomName: campaign['title'] as String? ?? 'Room',
-            iconPath: campaign['icon_url'] as String?,
-            iconIsAsset: true,
+            iconPath: iconUrl,
+            // Les icônes de démonstration sont des chemins d'asset ; toute
+            // autre valeur est une URL publique Supabase Storage (image
+            // importée depuis la galerie, voir RoomCreatePage.uploadImage).
+            iconIsAsset: iconUrl == null || iconUrl.startsWith('assets/'),
             description: campaign['description'] as String? ?? '',
             lastUpdate: _formatLastUpdate(
               (campaign['updated_at'] ?? campaign['created_at']) as String?,

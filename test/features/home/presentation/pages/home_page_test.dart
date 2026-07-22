@@ -11,7 +11,8 @@ void main() {
 
     expect(find.text('Accueil'), findsOneWidget);
     expect(find.text('Campagnes en cours'), findsOneWidget);
-    expect(find.text('Mystères de l\'Ombre'), findsOneWidget);
+    // "Mystères de l'Ombre" apparaît aussi en sous-titre d'un document.
+    expect(find.text('Mystères de l\'Ombre'), findsNWidgets(2));
     // "La Quête du Dragon" apparaît aussi en sous-titre d'un document.
     expect(find.text('La Quête du Dragon'), findsNWidgets(2));
     expect(find.text('Derniers documents modifiés'), findsOneWidget);

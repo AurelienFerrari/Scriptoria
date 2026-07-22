@@ -52,12 +52,27 @@ class _RoomCreatePageState extends State<RoomCreatePage> {
 
     setState(() => _isSubmitting = true);
     try {
-      final currentUser = context.read<AuthProvider>().currentUser;
-      final campaign = await context.read<AuthProvider>().createCampaign(
+      final authProvider = context.read<AuthProvider>();
+      final currentUser = authProvider.currentUser;
+
+      String? iconUrl;
+      if (_iconIsAsset) {
+        iconUrl = _iconPath;
+      } else if (_pickedFile != null) {
+        final fileName =
+            '${currentUser!.id}/room-icons/${DateTime.now().millisecondsSinceEpoch}_${_pickedFile!.name}';
+        iconUrl = await authProvider.uploadImage(
+          file: _pickedFile!,
+          bucket: 'images',
+          fileName: fileName,
+        );
+      }
+
+      final campaign = await authProvider.createCampaign(
             creatorId: currentUser!.id,
             title: _roomNameController.text.trim(),
             description: _descriptionController.text.trim(),
-            iconUrl: _iconIsAsset ? _iconPath : null,
+            iconUrl: iconUrl,
             maxPlayers: _nbPlayers,
             joinCode: generateJoinCode(),
           );

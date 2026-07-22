@@ -46,6 +46,7 @@ Légende : ✅ conforme · ❌ non conforme (bogue, voir [PLAN_CORRECTION_BOGUES
 | R16 | Créer une room, formulaire vide | Erreurs « Veuillez entrer un nom »/« ...une description » | ✅ | `room_create_page_test.dart` : *affiche les erreurs de validation si le formulaire est vide* |
 | R17 | Créer une room, champs remplis mais sans icône choisie | Message « Sélectionne une icône ! » | ✅ | `room_create_page_test.dart` : *exige une icône même si les champs texte sont remplis* |
 | R18 | Créer une room, tous les champs valides | La room est enregistrée et accessible ensuite, avec ses vraies données affichées | ✅ | `room_create_page_test.dart` : *RoomCreatePage crée réellement la room et navigue vers RoomShell* — écrit dans `campaigns` avec un code d'invitation généré ; `room_shell_test.dart` : *RoomShell affiche les vraies données de la room* (B18 corrigé) |
+| R18b | Créer une room avec une icône importée depuis la galerie (plutôt qu'une icône de démonstration) | L'image est uploadée vers le bucket de stockage `images`, son URL publique devient `icon_url` de la room | ✅ | `auth_provider_test.dart` : *uploadImage délègue à SupabaseService et renvoie l'URL publique* — branché dans `RoomCreatePage._createRoom()` (B15 corrigé) |
 | R19 | Rejoindre une room avec un code vide | Message « Veuillez entrer un code » | ✅ | `room_join_page_test.dart` : *RoomJoinPage affiche une erreur si le code est vide* |
 | R20 | Rejoindre une room avec un code invalide/inexistant | Message d'erreur explicite | ✅ | `room_join_page_test.dart` : *RoomJoinPage affiche une erreur si le code ne correspond à aucune room* |
 
@@ -69,5 +70,5 @@ Légende : ✅ conforme · ❌ non conforme (bogue, voir [PLAN_CORRECTION_BOGUES
 
 ## Synthèse
 
-- **27 scénarios conformes** sur 28 (dont la majorité couverte par un test automatisé rejoué à chaque push).
+- **28 scénarios conformes** sur 29 (dont la majorité couverte par un test automatisé rejoué à chaque push).
 - **1 scénario partiellement vérifié** (R08, dépend d'un appel réseau réel non automatisé).

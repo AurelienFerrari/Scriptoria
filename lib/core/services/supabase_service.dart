@@ -2,7 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:scriptoria/config/supabase_credentials.dart';
 
@@ -284,25 +284,22 @@ class SupabaseService {
 
   // ============ STOCKAGE DE FICHIERS ============
 
-  /// Uploader une image
+  /// Uploader une image vers un bucket de stockage et retourne son URL publique.
+  /// `file.readAsBytes()` (XFile de image_picker) fonctionne aussi bien sur le
+  /// web que sur mobile/desktop, contrairement à `dart:io.File` qui n'existe
+  /// pas sur Flutter Web.
   Future<String?> uploadImage({
-    required String filePath,
+    required XFile file,
     required String bucket,
     required String fileName,
   }) async {
-    try {
-      final file = await _readFile(filePath);
-      await _client.storage.from(bucket).uploadBinary(
-            fileName,
-            file,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
-          );
-
-      final publicUrl = _client.storage.from(bucket).getPublicUrl(fileName);
-      return publicUrl;
-    } catch (e) {
-      rethrow;
-    }
+    final bytes = await file.readAsBytes();
+    await _client.storage.from(bucket).uploadBinary(
+          fileName,
+          bytes,
+          fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+        );
+    return _client.storage.from(bucket).getPublicUrl(fileName);
   }
 
   /// Supprimer une image
@@ -310,21 +307,7 @@ class SupabaseService {
     required String bucket,
     required String fileName,
   }) async {
-    try {
-      await _client.storage.from(bucket).remove([fileName]);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// Lire un fichier (helper) - Retourne Uint8List
-  Future<Uint8List> _readFile(String filePath) async {
-    // À implémenter selon votre système de fichiers
-    // Exemple avec dart:io:
-    // import 'dart:io';
-    // final file = File(filePath);
-    // return await file.readAsBytes();
-    throw UnimplementedError('Implémenter la lecture de fichier');
+    await _client.storage.from(bucket).remove([fileName]);
   }
 
   // ============ REQUÊTES GÉNÉRIQUES ============
