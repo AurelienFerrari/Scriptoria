@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/utils/format_last_update.dart';
 import '../../../../ui/widgets/room_navbar.dart';
 import '../room_home_page.dart';
 import '../room_map_page.dart';
@@ -24,14 +25,6 @@ class _RoomShellState extends State<RoomShell> {
   void initState() {
     super.initState();
     _campaignFuture = context.read<AuthProvider>().getCampaignById(widget.roomId);
-  }
-
-  String _formatLastUpdate(String? iso) {
-    if (iso == null) return 'Inconnue';
-    final date = DateTime.tryParse(iso)?.toLocal();
-    if (date == null) return 'Inconnue';
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(date.day)}/${two(date.month)}/${date.year} à ${two(date.hour)}:${two(date.minute)}';
   }
 
   @override
@@ -75,7 +68,7 @@ class _RoomShellState extends State<RoomShell> {
             // importée depuis la galerie, voir RoomCreatePage.uploadImage).
             iconIsAsset: iconUrl == null || iconUrl.startsWith('assets/'),
             description: campaign['description'] as String? ?? '',
-            lastUpdate: _formatLastUpdate(
+            lastUpdate: formatLastUpdate(
               (campaign['updated_at'] ?? campaign['created_at']) as String?,
             ),
           ),

@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:scriptoria/core/services/supabase_service.dart';
 import 'core/providers/auth_provider.dart';
 import 'features/home/presentation/pages/home_page.dart';
-import 'features/room/presentation/shell/room_shell.dart';
 import 'features/room/presentation/home/room_create_page.dart';
 import 'features/room/presentation/home/room_join_page.dart';
 import 'features/profile/presentation/pages/profile_page.dart';
@@ -82,7 +81,6 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
         '/forgot-password': (context) => const ForgotPasswordPage(),
-        '/room': (context) => const RoomShell(roomId: 'demo'),
         '/CreationRoom': (context) => const RoomCreatePage(),
         '/JoinRoom': (context) => const RoomJoinPage(),
         '/profile': (context) => const ProfilePage(),

@@ -56,7 +56,7 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.resetPassword(email);
   }
 
-  Future<Map<String, dynamic>> createCampaign({
+Future<Map<String, dynamic>> createCampaign({
     required String creatorId,
     required String title,
     required String description,
@@ -80,6 +80,14 @@ class AuthProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>?> getCampaignById(String id) {
     return _supabaseService.getCampaignById(id);
+  }
+
+  Future<List<Map<String, dynamic>>> getVisibleCampaigns(String userId) {
+    return _supabaseService.getVisibleCampaigns(userId);
+  }
+
+  Future<void> joinCampaign({required String campaignId, required String userId}) {
+    return _supabaseService.joinCampaign(campaignId: campaignId, userId: userId);
   }
 
   Future<String?> uploadImage({

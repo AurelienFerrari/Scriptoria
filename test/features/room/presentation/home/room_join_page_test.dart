@@ -2,12 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:scriptoria/core/providers/auth_provider.dart';
 import 'package:scriptoria/features/room/presentation/home/room_join_page.dart';
 import 'package:scriptoria/features/room/presentation/shell/room_shell.dart';
 
 import '../../../../helpers/mock_supabase_service.dart';
+
+final _testUser = User(
+  id: 'user-1',
+  appMetadata: const {},
+  userMetadata: const {},
+  aud: 'authenticated',
+  createdAt: '2024-01-01T00:00:00Z',
+  email: 'aurelien@scriptoria.fr',
+);
 
 Widget _wrap(AuthProvider authProvider) {
   return ChangeNotifierProvider.value(
@@ -52,12 +62,16 @@ void main() {
   testWidgets('RoomJoinPage rejoint la room quand le code est valide', (
     WidgetTester tester,
   ) async {
+    when(() => mockSupabaseService.getCurrentUser()).thenReturn(_testUser);
     when(() => mockSupabaseService.getCampaignByJoinCode('X7K2P9')).thenAnswer(
       (_) async => {'id': 'campaign-1', 'title': 'Mystères de l\'Ombre'},
     );
     when(() => mockSupabaseService.getCampaignById('campaign-1')).thenAnswer(
       (_) async => {'id': 'campaign-1', 'title': 'Mystères de l\'Ombre'},
     );
+    when(
+      () => mockSupabaseService.joinCampaign(campaignId: 'campaign-1', userId: 'user-1'),
+    ).thenAnswer((_) async {});
 
     await tester.pumpWidget(_wrap(authProvider));
     await tester.enterText(find.byType(TextFormField), 'x7k2p9');
@@ -65,5 +79,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(RoomShell), findsOneWidget);
+    verify(
+      () => mockSupabaseService.joinCampaign(campaignId: 'campaign-1', userId: 'user-1'),
+    ).called(1);
   });
 }

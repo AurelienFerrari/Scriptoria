@@ -36,6 +36,13 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 - Incohérence de nommage dans les données de démonstration (« Mystères du
   Ombre » au lieu de « Mystères de l'Ombre » dans le sous-titre d'un
   document de l'accueil) — bogue B17
+- `HomePage` affichait toujours deux campagnes de démonstration codées en
+  dur dans « Campagnes en cours », même pour un utilisateur n'ayant créé ni
+  rejoint aucune room ; elle affiche désormais les vraies rooms créées ou
+  rejointes par code (`SupabaseService.getVisibleCampaigns`), et plus aucune
+  carte si la liste est vide. Rejoindre une room par code (`RoomJoinPage`)
+  persiste maintenant réellement l'adhésion (nouvelle table
+  `campaign_members`) au lieu de ne rien enregistrer — bogue B19
 
 ## [0.2.0] - 2026-07-13
 

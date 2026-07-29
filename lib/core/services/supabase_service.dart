@@ -326,6 +326,51 @@ class SupabaseService {
     }
   }
 
+  /// Récupère les campagnes visibles par un utilisateur : celles qu'il a
+  /// créées, plus celles qu'il a rejointes via un code (table
+  /// `campaign_members`, alimentée par [joinCampaign]).
+  Future<List<Map<String, dynamic>>> getVisibleCampaigns(String userId) async {
+    try {
+      final owned = await _client
+          .from('campaigns')
+          .select()
+          .eq('creator_id', userId);
+
+      final joinedRows = await _client
+          .from('campaign_members')
+          .select('campaigns(*)')
+          .eq('user_id', userId);
+      final joined = joinedRows
+          .map((row) => row['campaigns'] as Map<String, dynamic>?)
+          .whereType<Map<String, dynamic>>();
+
+      final byId = <String, Map<String, dynamic>>{};
+      for (final campaign in [...owned, ...joined]) {
+        byId[campaign['id'] as String] = campaign;
+      }
+
+      final result = byId.values.toList()
+        ..sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
+      return result;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Enregistre qu'un utilisateur a rejoint une campagne via son code
+  /// d'invitation. `ignoreDuplicates` permet de rejoindre à nouveau la même
+  /// room sans provoquer d'erreur de contrainte unique.
+  Future<void> joinCampaign({
+    required String campaignId,
+    required String userId,
+  }) async {
+    await _client.from('campaign_members').upsert(
+      {'campaign_id': campaignId, 'user_id': userId},
+      onConflict: 'campaign_id,user_id',
+      ignoreDuplicates: true,
+    );
+  }
+
   /// Crée une campagne (room) et renvoie la ligne créée
   Future<Map<String, dynamic>> createCampaign({
     required String creatorId,
