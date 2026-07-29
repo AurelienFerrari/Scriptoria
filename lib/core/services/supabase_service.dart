@@ -166,10 +166,22 @@ class SupabaseService {
     return _client.auth.currentUser != null;
   }
 
+  /// Émet un événement à chaque changement d'état d'authentification, y
+  /// compris `AuthChangeEvent.passwordRecovery` quand l'utilisateur arrive
+  /// via le deep link de réinitialisation de mot de passe (voir main.dart).
+  Stream<AuthState> get onAuthStateChange => _client.auth.onAuthStateChange;
+
+  /// URL de deep link vers laquelle Supabase redirige après confirmation
+  /// d'email ou clic sur un lien de réinitialisation de mot de passe.
+  /// Doit être enregistrée comme schéma custom côté natif (voir
+  /// AndroidManifest.xml / Info.plist) et ajoutée à l'allow-list "Redirect
+  /// URLs" du projet Supabase (Authentication > URL Configuration).
+  static const String authCallbackUrl = 'com.example.scriptoria://reset-callback/';
+
   /// Réinitialiser le mot de passe
   Future<void> resetPassword(String email) async {
     try {
-      await _client.auth.resetPasswordForEmail(email);
+      await _client.auth.resetPasswordForEmail(email, redirectTo: authCallbackUrl);
     } catch (e) {
       rethrow;
     }

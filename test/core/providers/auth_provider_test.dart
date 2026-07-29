@@ -113,6 +113,24 @@ void main() {
     verify(() => mockSupabaseService.resetPassword('demo@scriptoria.fr')).called(1);
   });
 
+  test('updatePassword délègue à SupabaseService', () async {
+    final user = User(
+      id: 'user-1',
+      appMetadata: const {},
+      userMetadata: const {},
+      aud: 'authenticated',
+      createdAt: '2024-01-01T00:00:00Z',
+      email: 'demo@scriptoria.fr',
+    );
+    when(() => mockSupabaseService.updatePassword('nouveauMotDePasse1')).thenAnswer(
+      (_) async => UserResponse.fromJson(user.toJson()),
+    );
+
+    await authProvider.updatePassword('nouveauMotDePasse1');
+
+    verify(() => mockSupabaseService.updatePassword('nouveauMotDePasse1')).called(1);
+  });
+
   test('createCampaign délègue à SupabaseService', () async {
     when(
       () => mockSupabaseService.createCampaign(

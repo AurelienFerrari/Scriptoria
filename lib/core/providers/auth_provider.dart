@@ -14,6 +14,7 @@ class AuthProvider extends ChangeNotifier {
 
   User? get currentUser => _supabaseService.getCurrentUser();
   bool get isLoggedIn => currentUser != null;
+  Stream<AuthState> get onAuthStateChange => _supabaseService.onAuthStateChange;
 
   Future<AuthResponse> signIn({
     required String email,
@@ -56,7 +57,11 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.resetPassword(email);
   }
 
-Future<Map<String, dynamic>> createCampaign({
+  Future<UserResponse> updatePassword(String newPassword) {
+    return _supabaseService.updatePassword(newPassword);
+  }
+
+  Future<Map<String, dynamic>> createCampaign({
     required String creatorId,
     required String title,
     required String description,

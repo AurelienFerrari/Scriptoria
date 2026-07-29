@@ -38,6 +38,7 @@ void main() {
   ) async {
     final mockSupabaseService = MockSupabaseService();
     when(() => mockSupabaseService.getCurrentUser()).thenReturn(null);
+    when(() => mockSupabaseService.onAuthStateChange).thenAnswer((_) => const Stream.empty());
 
     await tester.pumpWidget(
       ChangeNotifierProvider(
@@ -72,6 +73,7 @@ void main() {
   ) async {
     final mockSupabaseService = MockSupabaseService();
     when(() => mockSupabaseService.getCurrentUser()).thenReturn(null);
+    when(() => mockSupabaseService.onAuthStateChange).thenAnswer((_) => const Stream.empty());
 
     await tester.pumpWidget(
       ChangeNotifierProvider(
@@ -92,6 +94,7 @@ void main() {
   ) async {
     final mockSupabaseService = MockSupabaseService();
     when(() => mockSupabaseService.getCurrentUser()).thenReturn(null);
+    when(() => mockSupabaseService.onAuthStateChange).thenAnswer((_) => const Stream.empty());
 
     await tester.pumpWidget(
       ChangeNotifierProvider(
