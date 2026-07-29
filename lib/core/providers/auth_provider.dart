@@ -14,6 +14,7 @@ class AuthProvider extends ChangeNotifier {
 
   User? get currentUser => _supabaseService.getCurrentUser();
   bool get isLoggedIn => currentUser != null;
+  Stream<AuthState> get onAuthStateChange => _supabaseService.onAuthStateChange;
 
   Future<AuthResponse> signIn({
     required String email,
@@ -56,6 +57,10 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.resetPassword(email);
   }
 
+  Future<UserResponse> updatePassword(String newPassword) {
+    return _supabaseService.updatePassword(newPassword);
+  }
+
   Future<Map<String, dynamic>> createCampaign({
     required String creatorId,
     required String title,
@@ -80,6 +85,14 @@ class AuthProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>?> getCampaignById(String id) {
     return _supabaseService.getCampaignById(id);
+  }
+
+  Future<List<Map<String, dynamic>>> getVisibleCampaigns(String userId) {
+    return _supabaseService.getVisibleCampaigns(userId);
+  }
+
+  Future<void> joinCampaign({required String campaignId, required String userId}) {
+    return _supabaseService.joinCampaign(campaignId: campaignId, userId: userId);
   }
 
   Future<String?> uploadImage({

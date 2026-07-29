@@ -18,6 +18,7 @@ Légende : ✅ conforme · ❌ non conforme (bogue, voir [PLAN_CORRECTION_BOGUES
 | R03 | Se connecter avec un email/mot de passe invalide | Message clair « Email ou mot de passe incorrect » (pas le code d'erreur brut Supabase) | ✅ | `friendly_auth_error_test.dart` : *traduit le code "invalid_credentials"* |
 | R04 | Cliquer sur l'œil du champ mot de passe | Affiche/masque le mot de passe, tooltip présent pour un lecteur d'écran | ✅ | `widget_test.dart` : *le champ email a un label persistant et le bouton œil un nom accessible* |
 | R05 | Cliquer sur « Mot de passe oublié ? » | Un écran de récupération de mot de passe s'affiche | ✅ | `main_test.dart` : *MyApp résout les routes nommées /settings et /forgot-password* ; `forgot_password_page_test.dart` |
+| R05b | Cliquer sur le lien de réinitialisation reçu par email | Ramène dans l'app Scriptoria (deep link `com.example.scriptoria://reset-callback/`, pas un site web) sur un écran « Nouveau mot de passe » ; une fois validé, retour à l'accueil connecté | ✅ | `reset_password_page_test.dart` : *ResetPasswordPage met à jour le mot de passe et revient à l'accueil* (B20 corrigé) |
 | R06 | Ouvrir l'écran d'inscription | Titre, 5 champs (email, pseudo, nom affiché, mot de passe, confirmation), bouton « S'inscrire » | ✅ | `register_page_test.dart` : *RegisterPage affiche le titre, les champs et le bouton d'inscription* |
 | R07 | S'inscrire avec les champs vides | Message « Veuillez remplir tous les champs » | ✅ | `register_page_test.dart` : *RegisterPage refuse l'inscription si les champs sont vides* |
 | R08 | S'inscrire avec un nom d'utilisateur déjà pris | Message « Ce nom d'utilisateur est déjà pris » | ⚠️ | Logique présente dans le code (`isUsernameAvailable`), non automatisée (nécessite un vrai appel réseau Supabase) — vérifiée manuellement lors de la recréation du schéma |
@@ -28,8 +29,9 @@ Légende : ✅ conforme · ❌ non conforme (bogue, voir [PLAN_CORRECTION_BOGUES
 
 | # | Scénario | Résultat attendu | Résultat | Preuve |
 |---|---|---|---|---|
-| R11 | Ouvrir l'accueil | Sections « Campagnes en cours » et « Derniers documents modifiés », boutons « Créer une room »/« Rejoindre une room » | ✅ | `home_page_test.dart` : *HomePage affiche les sections, les campagnes et les documents* |
-| R12 | Cliquer sur l'avatar de profil | Navigation vers l'écran de profil | ✅ | Route `/profile` déclarée dans `main.dart` ; vérifié manuellement (le mécanisme de navigation nommée est le même que pour `/register` et `/room`, testés dans `main_test.dart`) |
+| R11 | Ouvrir l'accueil, ayant créé ou rejoint des rooms | Sections « Campagnes en cours » (une carte par room créée ou rejointe par code, plus de contenu de démonstration) et « Derniers documents modifiés », boutons « Créer une room »/« Rejoindre une room » | ✅ | `home_page_test.dart` : *HomePage affiche une room par campagne créée ou rejointe par l'utilisateur* (B19 corrigé) |
+| R11b | Ouvrir l'accueil sans avoir créé ni rejoint aucune room | Aucune carte de room affichée, message invitant à en créer ou en rejoindre une | ✅ | `home_page_test.dart` : *HomePage n'affiche aucune room quand l'utilisateur n'en a ni créé ni rejoint* (B19 corrigé) |
+| R12 | Cliquer sur l'avatar de profil | Navigation vers l'écran de profil | ✅ | Route `/profile` déclarée dans `main.dart` ; vérifié manuellement (le mécanisme de navigation nommée est le même que pour `/register`, testé dans `main_test.dart`) |
 
 ## Profil
 
@@ -49,6 +51,7 @@ Légende : ✅ conforme · ❌ non conforme (bogue, voir [PLAN_CORRECTION_BOGUES
 | R18b | Créer une room avec une icône importée depuis la galerie (plutôt qu'une icône de démonstration) | L'image est uploadée vers le bucket de stockage `images`, son URL publique devient `icon_url` de la room | ✅ | `auth_provider_test.dart` : *uploadImage délègue à SupabaseService et renvoie l'URL publique* — branché dans `RoomCreatePage._createRoom()` (B15 corrigé) |
 | R19 | Rejoindre une room avec un code vide | Message « Veuillez entrer un code » | ✅ | `room_join_page_test.dart` : *RoomJoinPage affiche une erreur si le code est vide* |
 | R20 | Rejoindre une room avec un code invalide/inexistant | Message d'erreur explicite | ✅ | `room_join_page_test.dart` : *RoomJoinPage affiche une erreur si le code ne correspond à aucune room* |
+| R20b | Rejoindre une room avec un code valide | L'adhésion est enregistrée (table `campaign_members`) : la room réapparaît ensuite sur l'accueil de l'utilisateur, pas seulement le temps de la navigation | ✅ | `room_join_page_test.dart` : *RoomJoinPage rejoint la room quand le code est valide* — vérifie l'appel à `SupabaseService.joinCampaign()` (B19 corrigé) |
 
 ## Navigation dans une room
 

@@ -28,8 +28,9 @@ class _RoomJoinPageState extends State<RoomJoinPage> {
 
     setState(() => _isSubmitting = true);
     try {
+      final authProvider = context.read<AuthProvider>();
       final code = _codeController.text.trim().toUpperCase();
-      final campaign = await context.read<AuthProvider>().getCampaignByJoinCode(code);
+      final campaign = await authProvider.getCampaignByJoinCode(code);
 
       if (campaign == null) {
         if (mounted) {
@@ -38,6 +39,11 @@ class _RoomJoinPageState extends State<RoomJoinPage> {
           );
         }
         return;
+      }
+
+      final userId = authProvider.currentUser?.id;
+      if (userId != null) {
+        await authProvider.joinCampaign(campaignId: campaign['id'] as String, userId: userId);
       }
 
       if (!mounted) return;

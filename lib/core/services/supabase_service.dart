@@ -166,10 +166,22 @@ class SupabaseService {
     return _client.auth.currentUser != null;
   }
 
+  /// Émet un événement à chaque changement d'état d'authentification, y
+  /// compris `AuthChangeEvent.passwordRecovery` quand l'utilisateur arrive
+  /// via le deep link de réinitialisation de mot de passe (voir main.dart).
+  Stream<AuthState> get onAuthStateChange => _client.auth.onAuthStateChange;
+
+  /// URL de deep link vers laquelle Supabase redirige après confirmation
+  /// d'email ou clic sur un lien de réinitialisation de mot de passe.
+  /// Doit être enregistrée comme schéma custom côté natif (voir
+  /// AndroidManifest.xml / Info.plist) et ajoutée à l'allow-list "Redirect
+  /// URLs" du projet Supabase (Authentication > URL Configuration).
+  static const String authCallbackUrl = 'com.example.scriptoria://reset-callback/';
+
   /// Réinitialiser le mot de passe
   Future<void> resetPassword(String email) async {
     try {
-      await _client.auth.resetPasswordForEmail(email);
+      await _client.auth.resetPasswordForEmail(email, redirectTo: authCallbackUrl);
     } catch (e) {
       rethrow;
     }
@@ -324,6 +336,51 @@ class SupabaseService {
     } catch (e) {
       return [];
     }
+  }
+
+  /// Récupère les campagnes visibles par un utilisateur : celles qu'il a
+  /// créées, plus celles qu'il a rejointes via un code (table
+  /// `campaign_members`, alimentée par [joinCampaign]).
+  Future<List<Map<String, dynamic>>> getVisibleCampaigns(String userId) async {
+    try {
+      final owned = await _client
+          .from('campaigns')
+          .select()
+          .eq('creator_id', userId);
+
+      final joinedRows = await _client
+          .from('campaign_members')
+          .select('campaigns(*)')
+          .eq('user_id', userId);
+      final joined = joinedRows
+          .map((row) => row['campaigns'] as Map<String, dynamic>?)
+          .whereType<Map<String, dynamic>>();
+
+      final byId = <String, Map<String, dynamic>>{};
+      for (final campaign in [...owned, ...joined]) {
+        byId[campaign['id'] as String] = campaign;
+      }
+
+      final result = byId.values.toList()
+        ..sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
+      return result;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Enregistre qu'un utilisateur a rejoint une campagne via son code
+  /// d'invitation. `ignoreDuplicates` permet de rejoindre à nouveau la même
+  /// room sans provoquer d'erreur de contrainte unique.
+  Future<void> joinCampaign({
+    required String campaignId,
+    required String userId,
+  }) async {
+    await _client.from('campaign_members').upsert(
+      {'campaign_id': campaignId, 'user_id': userId},
+      onConflict: 'campaign_id,user_id',
+      ignoreDuplicates: true,
+    );
   }
 
   /// Crée une campagne (room) et renvoie la ligne créée

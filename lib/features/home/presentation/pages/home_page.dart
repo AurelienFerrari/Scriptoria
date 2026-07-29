@@ -1,9 +1,77 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/utils/format_last_update.dart';
 import '../../../campaigns/presentation/widgets/campaign_card.dart';
 import '../../../documents/presentation/widgets/document_list_item.dart';
+import '../../../room/presentation/shell/room_shell.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late final Future<List<Map<String, dynamic>>> _campaignsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.currentUser?.id;
+    _campaignsFuture = userId == null
+        ? Future.value(<Map<String, dynamic>>[])
+        : authProvider.getVisibleCampaigns(userId);
+  }
+
+  Widget _buildCampaigns() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _campaignsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final campaigns = snapshot.data ?? [];
+        if (campaigns.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              "Vous n'avez pas encore de room. Créez-en une ou rejoignez-en une avec un code.",
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
+        }
+
+        return Column(
+          children: [
+            for (final campaign in campaigns) ...[
+              CampaignCard(
+                title: campaign['title'] as String? ?? 'Sans titre',
+                lastUpdate: formatLastUpdate(
+                  (campaign['updated_at'] ?? campaign['created_at']) as String?,
+                ),
+                imageUrl: campaign['icon_url'] as String?,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => RoomShell(roomId: campaign['id'] as String),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,23 +116,7 @@ class HomePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            CampaignCard(
-              title: 'Mystères de l\'Ombre',
-              lastUpdate: 'il y a 3 h',
-              imageUrl: 'assets/images/mystery.png',
-              onTap: () {
-                Navigator.pushNamed(context, '/room');
-              },
-            ),
-            const SizedBox(height: 12),
-            CampaignCard(
-              title: 'La Quête du Dragon',
-              lastUpdate: 'il y a 2 jours',
-              imageUrl: 'assets/images/dragon.png',
-              onTap: () {
-                Navigator.pushNamed(context, '/room');
-              },
-            ),
+            _buildCampaigns(),
             const SizedBox(height: 24),
             const Text(
               'Derniers documents modifiés',
@@ -146,7 +198,6 @@ class HomePage extends StatelessWidget {
           ],
         ),
       ),
-
     );
   }
 }

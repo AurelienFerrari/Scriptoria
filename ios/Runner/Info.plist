@@ -51,5 +51,16 @@
   <string>Cette application a besoin d'accéder à votre appareil photo pour prendre une photo de room.</string>
   <key>NSPhotoLibraryAddUsageDescription</key>
   <string>Cette application a besoin d'enregistrer des images dans votre galerie.</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>com.example.scriptoria</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>com.example.scriptoria</string>
+      </array>
+    </dict>
+  </array>
 </dict>
 </plist>
