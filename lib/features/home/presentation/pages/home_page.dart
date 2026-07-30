@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../../core/navigation/route_observer.dart';
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/utils/format_last_update.dart';
 import '../../../campaigns/presentation/widgets/campaign_card.dart';
@@ -13,17 +14,43 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  late final Future<List<Map<String, dynamic>>> _campaignsFuture;
+class _HomePageState extends State<HomePage> with RouteAware {
+  late Future<List<Map<String, dynamic>>> _campaignsFuture;
 
   @override
   void initState() {
     super.initState();
+    _campaignsFuture = _loadCampaigns();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  Future<List<Map<String, dynamic>>> _loadCampaigns() {
     final authProvider = context.read<AuthProvider>();
     final userId = authProvider.currentUser?.id;
-    _campaignsFuture = userId == null
+    return userId == null
         ? Future.value(<Map<String, dynamic>>[])
         : authProvider.getVisibleCampaigns(userId);
+  }
+
+  @override
+  void didPopNext() {
+    // On revient sur l'accueil après avoir dépilé une route poussée
+    // par-dessus (créer/rejoindre/ouvrir puis supprimer une room) :
+    // la liste peut avoir changé, il faut la recharger.
+    setState(() {
+      _campaignsFuture = _loadCampaigns();
+    });
   }
 
   Widget _buildCampaigns() {
@@ -48,10 +75,17 @@ class _HomePageState extends State<HomePage> {
           );
         }
 
-        return Column(
-          children: [
-            for (final campaign in campaigns) ...[
-              CampaignCard(
+        // Hauteur fixe (~2 cartes visibles) : la section reste compacte et
+        // défile sur elle-même plutôt que de pousser le reste de la page
+        // vers le bas quand il y a beaucoup de rooms.
+        return SizedBox(
+          height: 240,
+          child: ListView.separated(
+            itemCount: campaigns.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final campaign = campaigns[index];
+              return CampaignCard(
                 title: campaign['title'] as String? ?? 'Sans titre',
                 lastUpdate: formatLastUpdate(
                   (campaign['updated_at'] ?? campaign['created_at']) as String?,
@@ -64,10 +98,9 @@ class _HomePageState extends State<HomePage> {
                     ),
                   );
                 },
-              ),
-              const SizedBox(height: 12),
-            ],
-          ],
+              );
+            },
+          ),
         );
       },
     );

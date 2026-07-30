@@ -87,6 +87,10 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.getCampaignById(id);
   }
 
+  Future<void> deleteCampaign(String campaignId) {
+    return _supabaseService.deleteCampaign(campaignId);
+  }
+
   Future<List<Map<String, dynamic>>> getVisibleCampaigns(String userId) {
     return _supabaseService.getVisibleCampaigns(userId);
   }

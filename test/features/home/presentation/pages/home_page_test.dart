@@ -4,6 +4,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:scriptoria/core/navigation/route_observer.dart';
 import 'package:scriptoria/core/providers/auth_provider.dart';
 import 'package:scriptoria/features/campaigns/presentation/widgets/campaign_card.dart';
 import 'package:scriptoria/features/home/presentation/pages/home_page.dart';
@@ -23,7 +24,10 @@ final _testUser = User(
 Widget _wrap(AuthProvider authProvider) {
   return ChangeNotifierProvider.value(
     value: authProvider,
-    child: const MaterialApp(home: HomePage()),
+    child: MaterialApp(
+      navigatorObservers: [routeObserver],
+      home: const HomePage(),
+    ),
   );
 }
 
@@ -92,6 +96,43 @@ void main() {
         find.text("Vous n'avez pas encore de room. Créez-en une ou rejoignez-en une avec un code."),
         findsOneWidget,
       );
+    },
+  );
+
+  testWidgets(
+    'HomePage recharge ses campagnes quand on revient dessus après avoir dépilé une route',
+    (WidgetTester tester) async {
+      var callCount = 0;
+      when(() => mockSupabaseService.getVisibleCampaigns('user-1')).thenAnswer((_) async {
+        callCount++;
+        if (callCount == 1) return [];
+        return [
+          {
+            'id': 'campaign-1',
+            'title': 'Nouvelle room',
+            'icon_url': 'assets/images/mystery.png',
+            'created_at': '2026-07-14T10:32:00Z',
+            'updated_at': null,
+          },
+        ];
+      });
+
+      await tester.pumpWidget(_wrap(authProvider));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CampaignCard), findsNothing);
+
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.push(MaterialPageRoute(builder: (_) => const Scaffold(body: Text('Autre écran'))));
+      await tester.pumpAndSettle();
+      expect(find.text('Autre écran'), findsOneWidget);
+
+      navigator.pop();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CampaignCard), findsOneWidget);
+      expect(find.text('Nouvelle room'), findsWidgets);
+      verify(() => mockSupabaseService.getVisibleCampaigns('user-1')).called(2);
     },
   );
 

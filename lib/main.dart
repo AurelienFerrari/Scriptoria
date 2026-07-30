@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:scriptoria/core/services/supabase_service.dart';
+import 'core/navigation/route_observer.dart';
 import 'core/providers/auth_provider.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/room/presentation/home/room_create_page.dart';
@@ -111,6 +112,7 @@ class _MyAppState extends State<MyApp> {
 
     return MaterialApp(
       navigatorKey: navigatorKey,
+      navigatorObservers: [routeObserver],
       title: 'Scriptoria',
       theme: ThemeData.dark(),
       home: isLoggedIn ? const HomePage() : const LoginPage(),

@@ -50,6 +50,14 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   qui affiche un nouvel écran `ResetPasswordPage` pour définir le nouveau
   mot de passe (`AuthProvider.updatePassword`, jusque-là jamais branchée) —
   bogue B20
+- `HomePage` ne rechargeait jamais sa liste de campagnes en revenant dessus
+  (ex : après avoir créé une room) car la requête n'était faite qu'une fois
+  dans `initState`. Utilise désormais `RouteObserver`/`RouteAware` pour
+  recharger la liste à chaque retour sur l'accueil ; la section « Campagnes
+  en cours » a aussi une hauteur fixe et défile sur elle-même. Le bouton
+  « Supprimer la room » existait mais n'était jamais branché ; il appelle
+  maintenant `SupabaseService.deleteCampaign()` (confirmation préalable,
+  visible seulement pour le créateur de la room) — bogue B21
 
 ## [0.2.0] - 2026-07-13
 
