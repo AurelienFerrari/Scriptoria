@@ -16,12 +16,27 @@ void main() {
     expect(find.text('Joueurs de la room'), findsOneWidget);
   });
 
-  testWidgets('RoomSettingsPage affiche les options de la room', (WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(home: RoomSettingsPage()));
+  testWidgets('RoomSettingsPage affiche les options de la room pour le créateur', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: RoomSettingsPage(roomId: 'room-1', isCreator: true)),
+    );
 
     expect(find.text('Paramètres de la Room'), findsOneWidget);
     expect(find.text('Nom de la room'), findsOneWidget);
     expect(find.text('Room privée'), findsOneWidget);
     expect(find.text('Supprimer la room'), findsOneWidget);
+  });
+
+  testWidgets("RoomSettingsPage cache le bouton supprimer pour un non-créateur", (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: RoomSettingsPage(roomId: 'room-1', isCreator: false)),
+    );
+
+    expect(find.text('Paramètres de la Room'), findsOneWidget);
+    expect(find.text('Supprimer la room'), findsNothing);
   });
 }

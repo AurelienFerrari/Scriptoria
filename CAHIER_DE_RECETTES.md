@@ -31,6 +31,7 @@ Légende : ✅ conforme · ❌ non conforme (bogue, voir [PLAN_CORRECTION_BOGUES
 |---|---|---|---|---|
 | R11 | Ouvrir l'accueil, ayant créé ou rejoint des rooms | Sections « Campagnes en cours » (une carte par room créée ou rejointe par code, plus de contenu de démonstration) et « Derniers documents modifiés », boutons « Créer une room »/« Rejoindre une room » | ✅ | `home_page_test.dart` : *HomePage affiche une room par campagne créée ou rejointe par l'utilisateur* (B19 corrigé) |
 | R11b | Ouvrir l'accueil sans avoir créé ni rejoint aucune room | Aucune carte de room affichée, message invitant à en créer ou en rejoindre une | ✅ | `home_page_test.dart` : *HomePage n'affiche aucune room quand l'utilisateur n'en a ni créé ni rejoint* (B19 corrigé) |
+| R11c | Créer une room puis revenir en arrière sur l'accueil | La nouvelle room apparaît immédiatement dans « Campagnes en cours », sans avoir à relancer l'app | ✅ | `home_page_test.dart` : *HomePage recharge ses campagnes quand on revient dessus après avoir dépilé une route* (B21 corrigé) |
 | R12 | Cliquer sur l'avatar de profil | Navigation vers l'écran de profil | ✅ | Route `/profile` déclarée dans `main.dart` ; vérifié manuellement (le mécanisme de navigation nommée est le même que pour `/register`, testé dans `main_test.dart`) |
 
 ## Profil
@@ -64,6 +65,9 @@ Légende : ✅ conforme · ❌ non conforme (bogue, voir [PLAN_CORRECTION_BOGUES
 | R25 | Écrire et envoyer un message dans le chat | Le message apparaît dans la liste | ✅ | `room_chat_page_test.dart` : *RoomChatPage ajoute un message envoyé à la liste* |
 | R26 | Envoyer un message vide | Rien ne s'ajoute à la liste | ✅ | `room_chat_page_test.dart` : *ignore un message vide* |
 | R27 | Ajouter une image à la galerie de la room | Image ajoutée à la grille | ✅ | `gallery_grid_test.dart` |
+| R28 | Supprimer une room (en tant que créateur), avec confirmation | Boîte de dialogue de confirmation, puis suppression réelle (`campaigns`) et retour à l'accueil sans la room | ✅ | `room_settings_page_test.dart` : *RoomSettingsPage supprime la room et revient à l'accueil après confirmation* (B21 corrigé) |
+| R29 | Annuler la suppression d'une room | Rien n'est supprimé, on reste sur les paramètres de la room | ✅ | `room_settings_page_test.dart` : *RoomSettingsPage annule la suppression si on ne confirme pas* |
+| R30 | Ouvrir les paramètres d'une room rejointe (pas créée soi-même) | Le bouton « Supprimer la room » n'est pas affiché | ✅ | `room_settings_page_test.dart` / `room_static_pages_test.dart` : *RoomSettingsPage cache le bouton supprimer pour un non-créateur* |
 
 ## Paramètres de l'application
 

@@ -421,6 +421,12 @@ class SupabaseService {
     }
   }
 
+  /// Supprime une campagne (room). La policy RLS `campaigns_delete_own`
+  /// garantit que seul son créateur peut effectivement la supprimer.
+  Future<void> deleteCampaign(String campaignId) async {
+    await _client.from('campaigns').delete().eq('id', campaignId);
+  }
+
   /// Recherche une campagne par son code d'invitation
   Future<Map<String, dynamic>?> getCampaignByJoinCode(String joinCode) async {
     try {

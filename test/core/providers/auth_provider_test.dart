@@ -175,6 +175,14 @@ void main() {
     expect(campaign, {'id': 'campaign-1', 'title': 'Ma room'});
   });
 
+  test('deleteCampaign délègue à SupabaseService', () async {
+    when(() => mockSupabaseService.deleteCampaign('campaign-1')).thenAnswer((_) async {});
+
+    await authProvider.deleteCampaign('campaign-1');
+
+    verify(() => mockSupabaseService.deleteCampaign('campaign-1')).called(1);
+  });
+
   test('uploadImage délègue à SupabaseService et renvoie l\'URL publique', () async {
     final file = XFile.fromData(Uint8List.fromList([1, 2, 3]), name: 'icone.jpg');
     const publicUrl = 'https://xyz.supabase.co/storage/v1/object/public/images/user-1/icone.jpg';

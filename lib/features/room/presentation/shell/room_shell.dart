@@ -75,7 +75,10 @@ class _RoomShellState extends State<RoomShell> {
           const RoomMapPage(),
           const RoomToolsPage(),
           const RoomChatPage(),
-          const RoomSettingsPage(),
+          RoomSettingsPage(
+            roomId: widget.roomId,
+            isCreator: campaign['creator_id'] == context.read<AuthProvider>().currentUser?.id,
+          ),
         ];
 
         return Scaffold(

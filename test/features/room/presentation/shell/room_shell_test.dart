@@ -2,11 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:scriptoria/core/providers/auth_provider.dart';
 import 'package:scriptoria/features/room/presentation/shell/room_shell.dart';
 
 import '../../../../helpers/mock_supabase_service.dart';
+
+final _testUser = User(
+  id: 'user-1',
+  appMetadata: const {},
+  userMetadata: const {},
+  aud: 'authenticated',
+  createdAt: '2024-01-01T00:00:00Z',
+  email: 'aurelien@scriptoria.fr',
+);
 
 Widget _wrap(AuthProvider authProvider, String roomId) {
   return ChangeNotifierProvider.value(
@@ -22,6 +32,7 @@ void main() {
   setUp(() {
     mockSupabaseService = MockSupabaseService();
     authProvider = AuthProvider(supabaseService: mockSupabaseService);
+    when(() => mockSupabaseService.getCurrentUser()).thenReturn(_testUser);
   });
 
   testWidgets('RoomShell affiche les vraies données de la room et change de page au tap', (
@@ -30,6 +41,7 @@ void main() {
     when(() => mockSupabaseService.getCampaignById('campaign-1')).thenAnswer(
       (_) async => {
         'id': 'campaign-1',
+        'creator_id': 'user-1',
         'title': 'Mystères de l\'Ombre',
         'description': 'Une enquête dans les bas-fonds de la ville.',
         'icon_url': null,
