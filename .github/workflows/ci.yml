@@ -33,6 +33,14 @@ jobs:
       - name: Préparer un .env factice (compilation uniquement)
         run: cp .env.example .env
 
+      # Même principe pour la config Firebase (Crashlytics/Performance
+      # Monitoring, voir MAINTENANCE.md) : les tests n'appellent pas Firebase
+      # pour de vrai, un fichier syntaxiquement valide suffit à compiler.
+      - name: Préparer la config Firebase factice (compilation uniquement)
+        run: |
+          cp lib/firebase_options.dart.example lib/firebase_options.dart
+          cp android/app/google-services.json.example android/app/google-services.json
+
       - run: flutter pub get
       # Erreurs et warnings bloquent le pipeline ; les infos (style, dépréciations
       # mineures) sont visibles mais non bloquantes — critère de qualité assumé.
@@ -48,7 +56,7 @@ jobs:
       # apparaître dans lcov.info, sinon il est silencieusement exclu du calcul.
       - name: Vérifier le seuil de couverture minimal (50% du code exécutable)
         run: |
-          untouched=$(comm -23 <(find lib -name "*.dart" ! -name "supabase_credentials.dart" | sort) <(grep "^SF:" coverage/lcov.info | cut -c4- | tr '\\' '/' | sort))
+          untouched=$(comm -23 <(find lib -name "*.dart" ! -name "supabase_credentials.dart" ! -name "firebase_options.dart" | sort) <(grep "^SF:" coverage/lcov.info | cut -c4- | tr '\\' '/' | sort))
           if [ -n "$untouched" ]; then
             echo "Fichiers de lib/ jamais touchés par un test (absents de lcov.info) :"
             echo "$untouched"
@@ -87,6 +95,22 @@ jobs:
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
 
+      # Vraie config Firebase si les secrets du dépôt sont renseignés (voir
+      # MAINTENANCE.md), sinon repli sur la config factice : la build reste
+      # verte, seul le monitoring de cet artefact précis est alors inactif.
+      - name: Générer la config Firebase (réelle si secrets configurés, sinon factice)
+        run: |
+          if [ -n "${{ secrets.FIREBASE_OPTIONS_DART_B64 }}" ]; then
+            echo "${{ secrets.FIREBASE_OPTIONS_DART_B64 }}" | base64 -d > lib/firebase_options.dart
+          else
+            cp lib/firebase_options.dart.example lib/firebase_options.dart
+          fi
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 -d > android/app/google-services.json
+          else
+            cp android/app/google-services.json.example android/app/google-services.json
+          fi
+
       - run: flutter pub get
       - run: flutter build apk --release
 
@@ -123,6 +147,19 @@ jobs:
         run: |
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+
+      - name: Générer la config Firebase (réelle si secrets configurés, sinon factice)
+        run: |
+          if [ -n "${{ secrets.FIREBASE_OPTIONS_DART_B64 }}" ]; then
+            echo "${{ secrets.FIREBASE_OPTIONS_DART_B64 }}" | base64 -d > lib/firebase_options.dart
+          else
+            cp lib/firebase_options.dart.example lib/firebase_options.dart
+          fi
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICES_JSON_B64 }}" | base64 -d > android/app/google-services.json
+          else
+            cp android/app/google-services.json.example android/app/google-services.json
+          fi
 
       - run: flutter pub get
       - run: flutter build web --release --base-href /Scriptoria/

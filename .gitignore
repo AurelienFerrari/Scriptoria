@@ -67,3 +67,6 @@ run_dev.ps1
 # Credentials files - NEVER commit these!
 # (the .example / .dart.example templates ARE committed on purpose)
 lib/config/supabase_credentials.dart
+lib/firebase_options.dart
+android/app/google-services.json
+firebase.json

@@ -10,6 +10,12 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 - `SECURITE.md` : mapping explicite aux 10 catégories de l'OWASP Top 10 2021,
   avec les limites assumées documentées (pas de 2FA, pas de monitoring
   centralisé, pas de scan automatique de vulnérabilités des dépendances)
+- Monitoring applicatif (Firebase Crashlytics + Performance Monitoring) :
+  capture automatique des crashs et erreurs non gérées (`FlutterError.onError`,
+  `PlatformDispatcher.instance.onError`), suivi des frames lentes/gelées et
+  du temps de démarrage. Best-effort (n'empêche jamais l'app de démarrer si
+  mal configuré), désactivé en mode debug. Comble la limite précédemment
+  documentée dans `SECURITE.md` (A09). Voir `MAINTENANCE.md`.
 
 ### Corrigé
 - Le lien « Mot de passe oublié ? » de `LoginPage` pointait vers une route
