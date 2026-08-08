@@ -42,6 +42,28 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 - Incohérence de nommage dans les données de démonstration (« Mystères du
   Ombre » au lieu de « Mystères de l'Ombre » dans le sous-titre d'un
   document de l'accueil) — bogue B17
+- `HomePage` affichait toujours deux campagnes de démonstration codées en
+  dur dans « Campagnes en cours », même pour un utilisateur n'ayant créé ni
+  rejoint aucune room ; elle affiche désormais les vraies rooms créées ou
+  rejointes par code (`SupabaseService.getVisibleCampaigns`), et plus aucune
+  carte si la liste est vide. Rejoindre une room par code (`RoomJoinPage`)
+  persiste maintenant réellement l'adhésion (nouvelle table
+  `campaign_members`) au lieu de ne rien enregistrer — bogue B19
+- Les liens de confirmation d'inscription et de réinitialisation de mot de
+  passe redirigeaient vers `http://localhost:3000` (Site URL web par
+  défaut), qui ne répond rien sur mobile ; un schéma d'URL personnalisé
+  (`com.example.scriptoria://reset-callback/`) ramène désormais dans l'app,
+  qui affiche un nouvel écran `ResetPasswordPage` pour définir le nouveau
+  mot de passe (`AuthProvider.updatePassword`, jusque-là jamais branchée) —
+  bogue B20
+- `HomePage` ne rechargeait jamais sa liste de campagnes en revenant dessus
+  (ex : après avoir créé une room) car la requête n'était faite qu'une fois
+  dans `initState`. Utilise désormais `RouteObserver`/`RouteAware` pour
+  recharger la liste à chaque retour sur l'accueil ; la section « Campagnes
+  en cours » a aussi une hauteur fixe et défile sur elle-même. Le bouton
+  « Supprimer la room » existait mais n'était jamais branché ; il appelle
+  maintenant `SupabaseService.deleteCampaign()` (confirmation préalable,
+  visible seulement pour le créateur de la room) — bogue B21
 
 ## [0.2.0] - 2026-07-13
 

@@ -1,9 +1,110 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/navigation/route_observer.dart';
+import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/utils/format_last_update.dart';
 import '../../../campaigns/presentation/widgets/campaign_card.dart';
 import '../../../documents/presentation/widgets/document_list_item.dart';
+import '../../../room/presentation/shell/room_shell.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> with RouteAware {
+  late Future<List<Map<String, dynamic>>> _campaignsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _campaignsFuture = _loadCampaigns();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  Future<List<Map<String, dynamic>>> _loadCampaigns() {
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.currentUser?.id;
+    return userId == null
+        ? Future.value(<Map<String, dynamic>>[])
+        : authProvider.getVisibleCampaigns(userId);
+  }
+
+  @override
+  void didPopNext() {
+    // On revient sur l'accueil après avoir dépilé une route poussée
+    // par-dessus (créer/rejoindre/ouvrir puis supprimer une room) :
+    // la liste peut avoir changé, il faut la recharger.
+    setState(() {
+      _campaignsFuture = _loadCampaigns();
+    });
+  }
+
+  Widget _buildCampaigns() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _campaignsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final campaigns = snapshot.data ?? [];
+        if (campaigns.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              "Vous n'avez pas encore de room. Créez-en une ou rejoignez-en une avec un code.",
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
+        }
+
+        // Hauteur fixe (~2 cartes visibles) : la section reste compacte et
+        // défile sur elle-même plutôt que de pousser le reste de la page
+        // vers le bas quand il y a beaucoup de rooms.
+        return SizedBox(
+          height: 240,
+          child: ListView.separated(
+            itemCount: campaigns.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final campaign = campaigns[index];
+              return CampaignCard(
+                title: campaign['title'] as String? ?? 'Sans titre',
+                lastUpdate: formatLastUpdate(
+                  (campaign['updated_at'] ?? campaign['created_at']) as String?,
+                ),
+                imageUrl: campaign['icon_url'] as String?,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => RoomShell(roomId: campaign['id'] as String),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,23 +149,7 @@ class HomePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            CampaignCard(
-              title: 'Mystères de l\'Ombre',
-              lastUpdate: 'il y a 3 h',
-              imageUrl: 'assets/images/mystery.png',
-              onTap: () {
-                Navigator.pushNamed(context, '/room');
-              },
-            ),
-            const SizedBox(height: 12),
-            CampaignCard(
-              title: 'La Quête du Dragon',
-              lastUpdate: 'il y a 2 jours',
-              imageUrl: 'assets/images/dragon.png',
-              onTap: () {
-                Navigator.pushNamed(context, '/room');
-              },
-            ),
+            _buildCampaigns(),
             const SizedBox(height: 24),
             const Text(
               'Derniers documents modifiés',
@@ -146,7 +231,6 @@ class HomePage extends StatelessWidget {
           ],
         ),
       ),
-
     );
   }
 }

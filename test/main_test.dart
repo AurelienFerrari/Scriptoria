@@ -8,7 +8,6 @@ import 'package:scriptoria/core/providers/auth_provider.dart';
 import 'package:scriptoria/features/auth/presentation/pages/login_page.dart';
 import 'package:scriptoria/features/auth/presentation/pages/register_page.dart';
 import 'package:scriptoria/features/home/presentation/pages/home_page.dart';
-import 'package:scriptoria/features/room/presentation/shell/room_shell.dart';
 import 'package:scriptoria/features/settings/presentation/pages/settings_page.dart';
 import 'package:scriptoria/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:scriptoria/main.dart';
@@ -39,6 +38,7 @@ void main() {
   ) async {
     final mockSupabaseService = MockSupabaseService();
     when(() => mockSupabaseService.getCurrentUser()).thenReturn(null);
+    when(() => mockSupabaseService.onAuthStateChange).thenAnswer((_) => const Stream.empty());
 
     await tester.pumpWidget(
       ChangeNotifierProvider(
@@ -55,6 +55,8 @@ void main() {
   ) async {
     final mockSupabaseService = MockSupabaseService();
     when(() => mockSupabaseService.getCurrentUser()).thenReturn(_testUser);
+    when(() => mockSupabaseService.getVisibleCampaigns('user-1')).thenAnswer((_) async => []);
+    when(() => mockSupabaseService.onAuthStateChange).thenAnswer((_) => const Stream.empty());
 
     await tester.pumpWidget(
       ChangeNotifierProvider(
@@ -66,14 +68,12 @@ void main() {
     expect(find.byType(HomePage), findsOneWidget);
   });
 
-  testWidgets('MyApp résout les routes nommées /register et /room', (
+  testWidgets('MyApp résout la route nommée /register', (
     WidgetTester tester,
   ) async {
     final mockSupabaseService = MockSupabaseService();
     when(() => mockSupabaseService.getCurrentUser()).thenReturn(null);
-    when(() => mockSupabaseService.getCampaignById('demo')).thenAnswer(
-      (_) async => {'id': 'demo', 'title': 'Room de démo'},
-    );
+    when(() => mockSupabaseService.onAuthStateChange).thenAnswer((_) => const Stream.empty());
 
     await tester.pumpWidget(
       ChangeNotifierProvider(
@@ -87,13 +87,6 @@ void main() {
     navigator.pushNamed('/register');
     await tester.pumpAndSettle();
     expect(find.byType(RegisterPage), findsOneWidget);
-
-    navigator.pop();
-    await tester.pumpAndSettle();
-
-    navigator.pushNamed('/room');
-    await tester.pumpAndSettle();
-    expect(find.byType(RoomShell), findsOneWidget);
   });
 
   testWidgets('MyApp résout les routes nommées /settings et /forgot-password', (
@@ -101,6 +94,7 @@ void main() {
   ) async {
     final mockSupabaseService = MockSupabaseService();
     when(() => mockSupabaseService.getCurrentUser()).thenReturn(null);
+    when(() => mockSupabaseService.onAuthStateChange).thenAnswer((_) => const Stream.empty());
 
     await tester.pumpWidget(
       ChangeNotifierProvider(

@@ -48,4 +48,44 @@ void main() {
 
     expect(find.text('Quitter'), findsOneWidget);
   });
+
+  testWidgets('CampaignCard affiche une icône de remplacement quand imageUrl est nul', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CampaignCard(
+            title: 'Room sans icône',
+            lastUpdate: 'il y a 1 h',
+            imageUrl: null,
+            onTap: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.auto_stories), findsOneWidget);
+    expect(find.byType(Image), findsNothing);
+  });
+
+  testWidgets('CampaignCard affiche une icône réseau quand imageUrl est une URL', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CampaignCard(
+            title: 'Room avec icône uploadée',
+            lastUpdate: 'il y a 1 h',
+            imageUrl: 'https://example.com/icon.png',
+            onTap: () {},
+          ),
+        ),
+      ),
+    );
+
+    final image = tester.widget<Image>(find.byType(Image));
+    expect(image.image, isA<NetworkImage>());
+  });
 }
