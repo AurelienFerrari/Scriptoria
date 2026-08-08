@@ -101,11 +101,13 @@ ce qui reste à faire plutôt que de prétendre à une couverture parfaite.
 
 ## A09:2021 — Security Logging and Monitoring Failures
 
-- **Limite connue, non traitée** : pas d'outil de monitoring/alerting
-  centralisé (type Sentry) branché sur l'app. Les seules traces sont les
-  `print()` de debug (console locale uniquement, rien de persistant côté
-  client) et les logs internes de Supabase (Database > Logs, Auth > Logs)
-  côté backend.
+- **Firebase Crashlytics** capture désormais tout crash et toute erreur non
+  gérée (framework et asynchrone) en conditions réelles, avec alerte email
+  automatique en cas de pic de plantages — voir
+  [MAINTENANCE.md](MAINTENANCE.md) pour le détail des sondes et seuils.
+- **Limite connue restante** : les logs internes Supabase (Database > Logs,
+  Auth > Logs) ne sont pas centralisés avec Crashlytics — deux tableaux de
+  bord distincts à consulter (backend vs client) plutôt qu'une vue unifiée.
 
 ## A10:2021 — Server-Side Request Forgery (SSRF)
 
@@ -125,5 +127,5 @@ ce qui reste à faire plutôt que de prétendre à une couverture parfaite.
 | A06 Vulnerable Components | ⚠️ Processus manuel, pas d'outil de scan automatique |
 | A07 Authentication Failures | ⚠️ Couverte pour l'essentiel, pas de 2FA |
 | A08 Software/Data Integrity | ✅ Couverte (CI + migrations versionnées) |
-| A09 Logging/Monitoring | ❌ Non traitée (pas d'outil de monitoring) |
+| A09 Logging/Monitoring | ✅ Couverte (Firebase Crashlytics + Performance Monitoring) |
 | A10 SSRF | N/A (pas de surface d'attaque correspondante) |

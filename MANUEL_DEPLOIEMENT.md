@@ -4,6 +4,7 @@
 
 - Flutter 3.29.3 (canal stable) — c'est la version épinglée dans la CI (`.github/workflows/ci.yml`), à utiliser en local pour éviter toute divergence.
 - Un compte [Supabase](https://supabase.com) (le projet utilise Auth, la base Postgres, le Storage).
+- Un compte [Firebase](https://console.firebase.google.com) (monitoring : Crashlytics + Performance Monitoring, voir [MAINTENANCE.md](MAINTENANCE.md)) — optionnel pour développer, l'app fonctionne sans.
 - Pour builder l'APK Android en local : le SDK Android (`flutter doctor` doit être vert sur la ligne Android toolchain).
 
 ## 1. Configurer le projet Supabase
@@ -32,6 +33,27 @@ dans Database > Advisors du dashboard Supabase.
 Aucune configuration supplémentaire n'est nécessaire pour Email/Password (activé
 par défaut). Si vous voulez désactiver la confirmation par email en
 développement : Authentication > Providers > Email > décocher *Confirm email*.
+
+## 1bis. Configurer le projet Firebase (monitoring, optionnel)
+
+Le monitoring (Crashlytics + Performance Monitoring, voir
+[MAINTENANCE.md](MAINTENANCE.md)) est *best-effort* : sans configuration,
+l'app démarre et fonctionne normalement, simplement sans remonter de
+données de monitoring.
+
+1. Installer les CLI : `npm install -g firebase-tools` puis
+   `dart pub global activate flutterfire_cli`.
+2. `firebase login`.
+3. Créer un projet : `firebase projects:create <id> --display-name "Scriptoria"`
+   (ou via [console.firebase.google.com](https://console.firebase.google.com)).
+4. Générer la configuration Flutter :
+   ```bash
+   flutterfire configure --project=<id> --platforms=android,web --android-package-name=com.example.scriptoria --yes
+   ```
+   Cela génère `lib/firebase_options.dart` et
+   `android/app/google-services.json` — tous deux ignorés par Git (voir
+   `.gitignore`), sur le même principe que les credentials Supabase. Les
+   fichiers `.example` correspondants sont versionnés comme gabarits.
 
 ## 2. Configurer les credentials côté app
 
@@ -75,6 +97,16 @@ chaque push/PR sur `main` :
 Sans ces secrets, l'APK et le déploiement web compilent quand même (un fichier
 `.env` factice est généré pour la compilation) mais l'app affichera l'écran
 d'erreur "Impossible d'initialiser Supabase" au lancement.
+
+**Optionnels, pour que le monitoring soit actif sur les artefacts publiés**
+(voir [MAINTENANCE.md](MAINTENANCE.md)) :
+
+- `FIREBASE_OPTIONS_DART_B64` — contenu de `lib/firebase_options.dart` encodé en base64 (`base64 -w0 lib/firebase_options.dart`)
+- `GOOGLE_SERVICES_JSON_B64` — contenu de `android/app/google-services.json` encodé en base64 (`base64 -w0 android/app/google-services.json`)
+
+Sans ces secrets, la CI reste verte (repli automatique sur la configuration
+factice `.example`) mais Crashlytics/Performance Monitoring restent inactifs
+sur l'APK publié et la démo web.
 
 ### Activer GitHub Pages (à faire une seule fois)
 
