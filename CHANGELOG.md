@@ -6,6 +6,8 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.3.0] - 2026-08-09
+
 ### Ajouté
 - `SECURITE.md` : mapping explicite aux 10 catégories de l'OWASP Top 10 2021,
   avec les limites assumées documentées (pas de 2FA, pas de monitoring
