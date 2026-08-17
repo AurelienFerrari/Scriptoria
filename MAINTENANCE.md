@@ -46,6 +46,19 @@ lentes/gelées sera utile).
 | **Modalité de signalement** | Email (comptes membres du projet Firebase), consultable aussi en continu sur le dashboard [console.firebase.google.com](https://console.firebase.google.com) |
 | **Disponibilité** | Web déployé sur GitHub Pages : disponibilité déjà surveillable indirectement via le badge de statut CI (échec de build/déploiement visible immédiatement) ; Performance Monitoring ajoute la disponibilité applicative fine (l'app se charge-t-elle, reste-t-elle réactive) que la CI seule ne peut pas voir |
 
+**Vérification réalisée** — Test contrôlé le 2026-08-09 : l'application a été
+compilée en configuration release (`flutter build apk --release`) et
+installée sur un appareil physique Android avec la vraie configuration
+Firebase du projet. Un plantage volontaire a été déclenché depuis l'app
+(`FirebaseCrashlytics.instance.crash()`, méthode officielle du SDK prévue
+pour ce test), confirmé dans les logs de l'appareil
+(`FirebaseCrashlyticsTestCrash: This is a test crash caused by calling
+.crash() in Dart.`) — la chaîne complète (déclenchement → capture par le SDK
+→ écriture locale → envoi au relancement de l'app → dashboard) a ainsi été
+exercée de bout en bout, et pas seulement mise en place sur le papier.
+
+`[Capture d'écran : le crash test dans le dashboard Crashlytics, avec sa stack trace]`
+
 **Mise en œuvre technique** ([lib/main.dart](lib/main.dart), fonction
 `_initializeMonitoring()`) : l'initialisation est *best-effort* et englobée
 dans un `try/catch` — si `firebase_options.dart` contient des valeurs
