@@ -32,6 +32,8 @@ exécuter dans l'ordre (via l'éditeur SQL du dashboard Supabase, ou la CLI
    au MJ
 7. `20260909210000_image_visibility.sql` — colonne `images.visible_to` : le MJ
    choisit, image par image, qui la voit (tous, personne, ou une sélection)
+8. `20260909220000_dice_rolls.sql` — table `dice_rolls` : journal des jets de
+   dés partagé avec la table, jets secrets réservés au MJ
 
 Après application, vérifier qu'il n'y a pas d'avertissement de sécurité inattendu
 dans Database > Advisors du dashboard Supabase.

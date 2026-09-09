@@ -2,8 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:provider/provider.dart';
 
+import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/providers/room_provider.dart';
+import '../../../../core/utils/friendly_error.dart';
 import '../../domain/dice.dart';
+import 'dice_journal.dart';
 
 const Color _bgColor = Color(0xFF161622);
 const Color _cardColor = Color(0xFF232336);
@@ -11,11 +16,12 @@ const Color _primaryColor = Color(0xFF6FE3E1);
 const Color _successColor = Color(0xFF7BE38C);
 const Color _failureColor = Color(0xFFE37B7B);
 
-/// Lanceur de dés de la room.
+/// Lanceur de dés de la room, et journal des jets de la table.
 ///
-/// Volontairement local : un jet ne transite pas par la base. Le partager
-/// avec toute la table supposerait le temps réel, qui arrive plus tard ; en
-/// attendant, l'outil reste utilisable hors ligne et sans latence.
+/// Un jet est calculé et affiché localement — l'animation ne doit pas attendre
+/// le réseau — puis enregistré dans `dice_rolls`, où toute la table le voit.
+/// Le MJ peut lancer en secret : le jet reste alors visible de lui seul, règle
+/// appliquée par la RLS et non par cet écran.
 class DePage extends StatefulWidget {
   /// Injectable pour que les tests vérifient des résultats exacts.
   final DiceRoller? roller;
@@ -26,11 +32,14 @@ class DePage extends StatefulWidget {
   State<DePage> createState() => _DePageState();
 }
 
-class _DePageState extends State<DePage> with SingleTickerProviderStateMixin {
+class _DePageState extends State<DePage> with TickerProviderStateMixin {
   late final DiceRoller _roller = widget.roller ?? DiceRoller();
 
   DiceNotation _notation = const DiceNotation(count: 1, sides: 20);
-  final List<DiceRoll> _history = [];
+  DiceRoll? _lastRoll;
+  bool _isSecret = false;
+
+  late final TabController _tabs;
 
   // Créé dès l'initialisation, et non paresseusement : un `late final` ne
   // serait construit qu'au premier accès, c'est-à-dire dans `dispose()` si
@@ -38,9 +47,14 @@ class _DePageState extends State<DePage> with SingleTickerProviderStateMixin {
   // désactivé.
   late final AnimationController _animation;
 
+  /// Incrémenté après chaque jet enregistré : le journal s'y abonne et se
+  /// recharge, sans que cet écran ait à connaître son état interne.
+  final ValueNotifier<int> _journalRevision = ValueNotifier<int>(0);
+
   @override
   void initState() {
     super.initState();
+    _tabs = TabController(length: 2, vsync: this);
     _animation = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 320),
@@ -49,11 +63,11 @@ class _DePageState extends State<DePage> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
+    _tabs.dispose();
     _animation.dispose();
+    _journalRevision.dispose();
     super.dispose();
   }
-
-  DiceRoll? get _lastRoll => _history.isEmpty ? null : _history.first;
 
   /// Durée pendant laquelle le premier dé tourne avant de se figer.
   static const int _spinMs = 1150;
@@ -98,14 +112,10 @@ class _DePageState extends State<DePage> with SingleTickerProviderStateMixin {
   void _roll() {
     final roll = _roller.roll(_notation);
 
-    setState(() {
-      _history.insert(0, roll);
-      // Le détail complet reste consultable, mais on borne l'historique :
-      // au-delà, c'est du bruit, et la liste n'est pas persistée de toute façon.
-      if (_history.length > 20) _history.removeLast();
-    });
+    setState(() => _lastRoll = roll);
 
-    _animation.duration = Duration(milliseconds: _rollDurationMs(roll.results.length));
+    _animation.duration =
+        Duration(milliseconds: _rollDurationMs(roll.results.length));
     _animation.forward(from: 0);
 
     // Le résultat change sans qu'aucun focus ne bouge : sans annonce
@@ -116,61 +126,125 @@ class _DePageState extends State<DePage> with SingleTickerProviderStateMixin {
       'Résultat du jet ${roll.notation.label} : ${roll.total}',
       Directionality.of(context),
     );
+
+    _record(roll);
   }
 
-  void _clearHistory() => setState(_history.clear);
+  /// Enregistre le jet dans le journal de la room.
+  ///
+  /// Volontairement détaché de l'animation : celle-ci ne doit pas attendre le
+  /// réseau, et un jet reste valable même si son enregistrement échoue — le
+  /// dé est tombé. L'échec est signalé sans effacer le résultat affiché.
+  Future<void> _record(DiceRoll roll) async {
+    final room = context.read<RoomProvider>();
+    final auth = context.read<AuthProvider>();
+    final userId = auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      await auth.addDiceRoll(
+        campaignId: room.roomId,
+        userId: userId,
+        sides: roll.notation.sides,
+        diceCount: roll.notation.count,
+        modifier: roll.notation.modifier,
+        results: roll.results,
+        isSecret: _isSecret,
+      );
+      _journalRevision.value++;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Jet non enregistré : ${friendlyErrorMessage(e)}'),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final room = context.watch<RoomProvider>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dé'),
         backgroundColor: _bgColor,
-        actions: [
-          if (_history.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.delete_sweep_outlined),
-              tooltip: 'Effacer l\'historique',
-              onPressed: _clearHistory,
-            ),
-        ],
-      ),
-      backgroundColor: _bgColor,
-      // Le bouton « Lancer » est ancré hors de la zone défilante : le bloc de
-      // résultat change de hauteur selon le nombre de dés, et l'action
-      // principale ne doit pas se déplacer sous le doigt entre deux jets.
-      // `SafeArea` l'écarte de la barre de navigation du téléphone.
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildSidesSelector(),
-                    const SizedBox(height: 24),
-                    _buildCountAndModifier(),
-                    const SizedBox(height: 24),
-                    _buildResult(),
-                    if (_history.length > 1) ...[
-                      const SizedBox(height: 32),
-                      _buildHistory(),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-              child: _buildRollButton(),
-            ),
+        bottom: TabBar(
+          controller: _tabs,
+          indicatorColor: _primaryColor,
+          labelColor: _primaryColor,
+          unselectedLabelColor: Colors.white70,
+          tabs: const [
+            Tab(text: 'Lancer'),
+            Tab(text: 'Journal'),
           ],
         ),
       ),
+      backgroundColor: _bgColor,
+      body: TabBarView(
+        controller: _tabs,
+        children: [
+          _buildRollTab(room),
+          DiceJournal(revision: _journalRevision),
+        ],
+      ),
     );
   }
+
+  Widget _buildRollTab(RoomProvider room) {
+    // Le bouton « Lancer » est ancré hors de la zone défilante : le bloc de
+    // résultat change de hauteur selon le nombre de dés, et l'action
+    // principale ne doit pas se déplacer sous le doigt entre deux jets.
+    // `SafeArea` l'écarte de la barre de navigation du téléphone.
+    return SafeArea(
+      child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildSidesSelector(),
+                  const SizedBox(height: 24),
+                  _buildCountAndModifier(),
+                  if (room.isMj) ...[
+                    const SizedBox(height: 8),
+                    _buildSecretToggle(),
+                  ],
+                  const SizedBox(height: 24),
+                  _buildResult(),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+            child: _buildRollButton(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Réservé au MJ : un joueur qui pourrait masquer ses jets ne masquerait que
+  /// ceux qui l'arrangent. La policy d'insertion le refuse de toute façon.
+  Widget _buildSecretToggle() {
+    return SwitchListTile(
+      value: _isSecret,
+      onChanged: (value) => setState(() => _isSecret = value),
+      contentPadding: EdgeInsets.zero,
+      title: const Text('Jet secret', style: TextStyle(color: Colors.white)),
+      subtitle: const Text(
+        'Visible de vous seul dans le journal',
+        style: TextStyle(color: Colors.white54, fontSize: 13),
+      ),
+      activeColor: _primaryColor,
+    );
+  }
+
 
   Widget _buildSidesSelector() {
     return Column(
@@ -424,36 +498,7 @@ class _DePageState extends State<DePage> with SingleTickerProviderStateMixin {
     );
   }
 
-  Widget _buildHistory() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Jets précédents',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 12),
-        // Le premier élément est déjà mis en avant dans le bloc de résultat.
-        ..._history.skip(1).map(
-              (roll) => ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.casino_outlined, color: Colors.white38, size: 20),
-                title: Text(
-                  '${roll.notation.label} → ${roll.total}',
-                  style: const TextStyle(color: Colors.white, fontSize: 15),
-                ),
-                subtitle: Text(
-                  roll.detail,
-                  style: const TextStyle(color: Colors.white54, fontSize: 13),
-                ),
-              ),
-            ),
-      ],
-    );
-  }
 }
-
 
 /// Un dé du jet, affiché seul.
 ///

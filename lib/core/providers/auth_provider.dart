@@ -137,6 +137,34 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
+  Future<void> addDiceRoll({
+    required String campaignId,
+    required String userId,
+    required int sides,
+    required int diceCount,
+    required int modifier,
+    required List<int> results,
+    bool isSecret = false,
+  }) {
+    return _supabaseService.addDiceRoll(
+      campaignId: campaignId,
+      userId: userId,
+      sides: sides,
+      diceCount: diceCount,
+      modifier: modifier,
+      results: results,
+      isSecret: isSecret,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getDiceRolls(String campaignId, {int limit = 50}) {
+    return _supabaseService.getDiceRolls(campaignId, limit: limit);
+  }
+
+  Future<void> clearDiceRolls(String campaignId) {
+    return _supabaseService.clearDiceRolls(campaignId);
+  }
+
   Future<void> updateImageVisibility({
     required String imageId,
     required List<String>? visibleTo,
