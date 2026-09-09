@@ -3,7 +3,7 @@ description: A new Flutter project.
 
 publish_to: 'none'
 
-version: 0.3.0+2
+version: 0.4.0+3
 
 environment:
   sdk: '>=3.1.0 <4.0.0'
@@ -27,6 +27,23 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.1
   mocktail: ^1.0.4
+  flutter_launcher_icons: ^0.14.4
+
+# Icône de lancement de l'app, générée depuis le logo déjà affiché dans
+# l'en-tête de l'accueil : l'icône du téléphone et celle de l'écran d'accueil
+# sont ainsi la même image.
+# Régénérer après modification du logo : dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/images/logo.png"
+  android: "launcher_icon"
+  # Android 6.0 minimum depuis l'ajout de firebase_performance.
+  min_sdk_android: 23
+  ios: false
+  web:
+    generate: true
+    image_path: "assets/images/logo.png"
+    background_color: "#161622"
+    theme_color: "#6FE3E1"
 
 flutter:
   uses-material-design: true

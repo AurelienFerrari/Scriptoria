@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:scriptoria/core/providers/auth_provider.dart';
-import 'package:scriptoria/core/utils/friendly_auth_error.dart';
+import 'package:scriptoria/core/utils/friendly_error.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -40,7 +40,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         setState(() => _emailSent = true);
       }
     } catch (e) {
-      setState(() => _errorMessage = friendlyAuthErrorMessage(e));
+      setState(() => _errorMessage = friendlyErrorMessage(e));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

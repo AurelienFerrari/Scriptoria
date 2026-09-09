@@ -24,6 +24,9 @@ exécuter dans l'ordre (via l'éditeur SQL du dashboard Supabase, ou la CLI
 2. `20260703184600_enable_rls_and_policies.sql` — active le Row Level Security sur les 4 tables
 3. `20260703184700_create_accessible_images_rpc.sql` — fonction `get_user_accessible_images`
 4. `20260703184800_create_storage_buckets.sql` — buckets `avatars`/`images`/`maps` + policies
+5. `20260909100000_campaign_members_and_roles.sql` — table `campaign_members` avec
+   rôle MJ/joueur, fonctions `is_campaign_member` / `is_campaign_mj`, trigger
+   rattachant le créateur d'une campagne comme MJ, et RLS associée
 
 Après application, vérifier qu'il n'y a pas d'avertissement de sécurité inattendu
 dans Database > Advisors du dashboard Supabase.

@@ -1,19 +1,42 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 
+/// Galerie d'images d'une room.
+///
+/// [onAddImage] et [onDeleteImage] valent `null` en lecture seule : c'est le
+/// mode des joueurs, qui consultent les images publiées par le MJ sans
+/// pouvoir en ajouter ni en retirer. Les boutons correspondants disparaissent
+/// alors, plutôt que d'être affichés désactivés — un bouton grisé laisserait
+/// croire à un droit qu'on n'a pas.
 class GalleryGrid extends StatelessWidget {
   final List<GalleryImage> images;
-  final VoidCallback onAddImage;
-  final void Function(int index) onDeleteImage;
+  final VoidCallback? onAddImage;
+  final void Function(int index)? onDeleteImage;
 
-  const GalleryGrid({Key? key, required this.images, required this.onAddImage, required this.onDeleteImage}) : super(key: key);
+  const GalleryGrid({
+    Key? key,
+    required this.images,
+    this.onAddImage,
+    this.onDeleteImage,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final items = <Widget>[
-      _buildAddButton(context),
+      if (onAddImage != null) _buildAddButton(context),
       ...List.generate(images.length, (i) => _buildGalleryImage(context, images[i], i)),
     ];
+
+    if (items.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Text(
+          "Le maître du jeu n'a pas encore publié d'image.",
+          style: TextStyle(color: Colors.white54),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
     return GridView.count(
       crossAxisCount: 3,
       shrinkWrap: true,
@@ -86,19 +109,20 @@ class GalleryGrid extends StatelessWidget {
                         },
                       ),
                     ),
-                    // Bouton suppression
-                    Positioned(
-                      top: 16,
-                      right: 16,
-                      child: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red, size: 32),
-                        tooltip: 'Supprimer l\'image',
-                        onPressed: () {
-                          onDeleteImage(controller.page?.round() ?? initialIndex);
-                          Navigator.of(context).pop();
-                        },
+                    // Bouton suppression, absent en lecture seule.
+                    if (onDeleteImage != null)
+                      Positioned(
+                        top: 16,
+                        right: 16,
+                        child: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red, size: 32),
+                          tooltip: 'Supprimer l\'image',
+                          onPressed: () {
+                            onDeleteImage!(controller.page?.round() ?? initialIndex);
+                            Navigator.of(context).pop();
+                          },
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),

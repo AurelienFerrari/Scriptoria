@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:scriptoria/core/providers/auth_provider.dart';
-import 'package:scriptoria/core/utils/friendly_auth_error.dart';
+import 'package:scriptoria/core/utils/friendly_error.dart';
 
 /// Écran affiché quand l'utilisateur arrive via le deep link de
 /// réinitialisation de mot de passe (voir main.dart : écoute de
@@ -57,7 +57,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
       }
     } catch (e) {
-      setState(() => _errorMessage = friendlyAuthErrorMessage(e));
+      setState(() => _errorMessage = friendlyErrorMessage(e));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

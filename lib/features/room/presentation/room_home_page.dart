@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'gallery_grid.dart';
 
 import 'package:image_picker/image_picker.dart';
+
+import '../../../core/providers/room_provider.dart';
 
 class RoomHomePage extends StatefulWidget {
   final String roomName;
@@ -94,13 +97,24 @@ class _RoomHomePageState extends State<RoomHomePage> {
             SizedBox(height: 32),
             // Galerie d'images (GridView)
             SizedBox(height: 24),
-            GalleryGrid(
-              images: _galleryImages,
-              onAddImage: _addImage,
-              onDeleteImage: (index) {
-                setState(() {
-                  _galleryImages.removeAt(index);
-                });
+            // Seul le MJ alimente la galerie ; les joueurs consultent ce
+            // qu'il y a publié. La galerie déménagera dans l'onglet Contenus
+            // quand elle sera persistée (les images ne vivent pour l'instant
+            // qu'en mémoire).
+            Builder(
+              builder: (context) {
+                final isMj = context.watch<RoomProvider>().isMj;
+                return GalleryGrid(
+                  images: _galleryImages,
+                  onAddImage: isMj ? _addImage : null,
+                  onDeleteImage: isMj
+                      ? (index) {
+                          setState(() {
+                            _galleryImages.removeAt(index);
+                          });
+                        }
+                      : null,
+                );
               },
             ),
             SizedBox(height: 24),

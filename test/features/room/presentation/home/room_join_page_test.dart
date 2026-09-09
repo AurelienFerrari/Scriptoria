@@ -72,6 +72,12 @@ void main() {
     when(
       () => mockSupabaseService.joinCampaign(campaignId: 'campaign-1', userId: 'user-1'),
     ).thenAnswer((_) async {});
+    when(
+      () => mockSupabaseService.getMemberRole(
+        campaignId: any(named: 'campaignId'),
+        userId: any(named: 'userId'),
+      ),
+    ).thenAnswer((_) async => 'player');
 
     await tester.pumpWidget(_wrap(authProvider));
     await tester.enterText(find.byType(TextFormField), 'x7k2p9');
