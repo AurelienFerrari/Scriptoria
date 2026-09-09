@@ -6,6 +6,8 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.5.0] - 2026-09-09
+
 ### Ajouté
 - Lanceur de dés dans les outils de la room, en remplacement de l'écran
   « Fonctionnalité Dé à venir » : dés usuels du jeu de rôle (d4 à d100),
@@ -15,6 +17,15 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   avec une source d'aléa injectable, ce qui permet de tester des résultats
   exacts plutôt qu'un simple encadrement. Le jet reste local : le diffuser à
   toute la table suppose le temps réel, prévu plus tard
+- Animation de lancer : chaque dé est affiché séparément, tourne, puis se fige
+  avec un décalage sur ses voisins. La face change de moins en moins vite à
+  l'approche de l'arrêt, le dé oscille et se pose d'un rebond, et le détail du
+  calcul n'apparaît qu'une fois tous les dés immobilisés. Chaque type de dé a
+  sa silhouette dessinée — triangle, carré, losange, pentagone, hexagone
+
+### Corrigé
+- L'analyse statique échouait en CI sur un import inutilisé :
+  `flutter analyze --no-fatal-infos` tolère les infos mais pas les warnings
 
 ## [0.4.0] - 2026-09-09
 
