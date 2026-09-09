@@ -1,7 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:scriptoria/config/supabase_credentials.dart';
@@ -320,6 +320,81 @@ class SupabaseService {
     required String fileName,
   }) async {
     await _client.storage.from(bucket).remove([fileName]);
+  }
+
+  // ============ GALERIE D'UNE ROOM ============
+
+  /// Bucket où sont déposées les images de galerie.
+  static const String galleryBucket = 'images';
+
+  /// Publie une image dans la galerie d'une room.
+  ///
+  /// Deux écritures : le fichier dans Storage, puis la ligne dans `images` qui
+  /// le rend découvrable par les membres. Le chemin commence par l'identifiant
+  /// de l'utilisateur, ce qu'exige la policy Storage `images_owner_write`.
+  ///
+  /// La policy `images_insert_own_mj` réserve la publication au MJ ; un joueur
+  /// qui contournerait l'interface verrait son insertion refusée.
+  Future<Map<String, dynamic>> addCampaignImage({
+    required XFile file,
+    required String campaignId,
+    required String ownerId,
+  }) async {
+    final path =
+        '$ownerId/campaign-$campaignId/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+
+    final url = await uploadImage(
+      file: file,
+      bucket: galleryBucket,
+      fileName: path,
+    );
+
+    return await _client
+        .from('images')
+        .insert({
+          'owner_id': ownerId,
+          'campaign_id': campaignId,
+          'bucket': galleryBucket,
+          'path': path,
+          'url': url,
+        })
+        .select()
+        .single();
+  }
+
+  /// Images publiées dans une room, de la plus récente à la plus ancienne.
+  Future<List<Map<String, dynamic>>> getCampaignImages(String campaignId) async {
+    try {
+      return await _client
+          .from('images')
+          .select()
+          .eq('campaign_id', campaignId)
+          .order('created_at', ascending: false);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Retire une image de la galerie d'une room.
+  ///
+  /// La ligne part en premier : c'est elle qui fait foi pour l'affichage, et
+  /// une ligne pointant vers un fichier absent afficherait une image cassée.
+  /// L'échec de la suppression du fichier est en revanche toléré — le MJ peut
+  /// retirer l'image d'un autre sans posséder son fichier dans Storage. Mieux
+  /// vaut un fichier orphelin dans un bucket qu'une galerie qu'on ne peut plus
+  /// nettoyer.
+  Future<void> removeCampaignImage({
+    required String imageId,
+    required String bucket,
+    required String path,
+  }) async {
+    await _client.from('images').delete().eq('id', imageId);
+
+    try {
+      await deleteImage(bucket: bucket, fileName: path);
+    } catch (e) {
+      debugPrint('Fichier $path non supprimé du bucket $bucket : $e');
+    }
   }
 
   // ============ REQUÊTES GÉNÉRIQUES ============

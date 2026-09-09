@@ -27,6 +27,9 @@ exécuter dans l'ordre (via l'éditeur SQL du dashboard Supabase, ou la CLI
 5. `20260909100000_campaign_members_and_roles.sql` — table `campaign_members` avec
    rôle MJ/joueur, fonctions `is_campaign_member` / `is_campaign_mj`, trigger
    rattachant le créateur d'une campagne comme MJ, et RLS associée
+6. `20260909200000_campaign_images_access.sql` — ouvre la table `images` à la
+   galerie partagée d'une room : lecture par les membres, publication réservée
+   au MJ
 
 Après application, vérifier qu'il n'y a pas d'avertissement de sécurité inattendu
 dans Database > Advisors du dashboard Supabase.

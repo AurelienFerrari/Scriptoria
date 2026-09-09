@@ -6,6 +6,28 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté
+- Onglet « Contenus » d'une room : la galerie d'images y est désormais
+  persistée (bucket Supabase `images` et table du même nom) et partagée avec
+  toute la table. Le MJ publie et retire, les joueurs consultent — la règle
+  est portée par la RLS, pas seulement par l'interface
+- Nom accessible sur les vignettes de la galerie, qui ouvraient l'aperçu plein
+  écran sans que rien ne l'annonce à un lecteur d'écran
+
+### Modifié
+- La galerie quitte l'accueil de la room, où elle ne vivait qu'en mémoire et
+  disparaissait à la fermeture de l'écran. L'accueil se recentre sur
+  l'identité de la room : icône, nom, description, dernière mise à jour
+- `RoomMapPage` (« Carte de la room ») est remplacée par `RoomContentsPage` :
+  l'onglet portait déjà le libellé « Contenus » et une icône de dossier
+
+### Corrigé
+- Une URL d'image invalide faisait apparaître une erreur de rendu au milieu de
+  la galerie ; la vignette concernée signale maintenant la panne et le reste
+  de la grille continue de s'afficher
+- Dans l'aperçu plein écran, le bouton de suppression refermait la demande de
+  confirmation au lieu de l'aperçu, rendant la suppression impossible
+
 ## [0.5.0] - 2026-09-09
 
 ### Ajouté

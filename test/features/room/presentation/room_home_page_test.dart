@@ -46,20 +46,10 @@ void main() {
     expect(find.text('Aujourd\'hui à 12:30'), findsOneWidget);
   });
 
-  testWidgets('le MJ peut ajouter une image à la galerie', (tester) async {
+  testWidgets('n\'affiche plus la galerie, passée dans l\'onglet Contenus',
+      (tester) async {
     await pumpAs(tester, kMjId, 'mj');
 
-    expect(find.bySemanticsLabel('Ajouter une image'), findsOneWidget);
-  });
-
-  testWidgets('un joueur consulte la galerie sans pouvoir l\'alimenter',
-      (tester) async {
-    await pumpAs(tester, kPlayerId, 'player');
-
     expect(find.bySemanticsLabel('Ajouter une image'), findsNothing);
-    expect(
-      find.text("Le maître du jeu n'a pas encore publié d'image."),
-      findsOneWidget,
-    );
   });
 }

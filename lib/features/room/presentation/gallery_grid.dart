@@ -24,7 +24,8 @@ class GalleryGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = <Widget>[
       if (onAddImage != null) _buildAddButton(context),
-      ...List.generate(images.length, (i) => _buildGalleryImage(context, images[i], i)),
+      ...List.generate(
+          images.length, (i) => _buildGalleryImage(context, images[i], i)),
     ];
 
     if (items.isEmpty) {
@@ -67,76 +68,110 @@ class GalleryGrid extends StatelessWidget {
     );
   }
 
-  Widget _buildGalleryImage(BuildContext context, GalleryImage img, int initialIndex) {
-    return GestureDetector(
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (context) {
-            PageController controller = PageController(initialPage: initialIndex);
-            return StatefulBuilder(
-              builder: (context, setState) => Dialog(
-                backgroundColor: Colors.transparent,
-                insetPadding: const EdgeInsets.all(8),
-                child: Stack(
-                  alignment: Alignment.topRight,
-                  children: [
-                    PageView.builder(
-                      controller: controller,
-                      itemCount: images.length,
-                      itemBuilder: (context, i) {
-                        final img = images[i];
-                        Widget imageWidget = img.isAsset
-                            ? Image.asset(img.path, fit: BoxFit.contain)
-                            : img.isNetwork
-                                ? Image.network(img.path, fit: BoxFit.contain)
-                                : Image.file(File(img.path), fit: BoxFit.contain);
-                        return _ZoomableImageViewer(
-                          imageWidget: imageWidget,
-                          onSwipeDown: () => Navigator.of(context).pop(),
-                        );
-                      },
-                    ),
-                    // Bouton retour (close)
-                    Positioned(
-                      top: 16,
-                      left: 16,
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
-                        tooltip: 'Fermer',
-                        onPressed: () {
-                          Navigator.of(context).pop();
+  Widget _buildGalleryImage(
+      BuildContext context, GalleryImage img, int initialIndex) {
+    // Nom accessible : la vignette est cliquable et ouvre l'aperçu plein
+    // écran, mais ne portait aucun libellé — un lecteur d'écran n'annonçait
+    // qu'une image sans indiquer qu'elle mène quelque part.
+    return Semantics(
+      button: true,
+      label: 'Ouvrir l\'image ${initialIndex + 1}',
+      child: GestureDetector(
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (context) {
+              PageController controller =
+                  PageController(initialPage: initialIndex);
+              return StatefulBuilder(
+                builder: (context, setState) => Dialog(
+                  backgroundColor: Colors.transparent,
+                  insetPadding: const EdgeInsets.all(8),
+                  child: Stack(
+                    alignment: Alignment.topRight,
+                    children: [
+                      PageView.builder(
+                        controller: controller,
+                        itemCount: images.length,
+                        itemBuilder: (context, i) {
+                          final img = images[i];
+                          Widget imageWidget = img.isAsset
+                              ? Image.asset(img.path, fit: BoxFit.contain)
+                              : img.isNetwork
+                                  ? Image.network(img.path, fit: BoxFit.contain)
+                                  : Image.file(File(img.path),
+                                      fit: BoxFit.contain);
+                          return _ZoomableImageViewer(
+                            imageWidget: imageWidget,
+                            onSwipeDown: () => Navigator.of(context).pop(),
+                          );
                         },
                       ),
-                    ),
-                    // Bouton suppression, absent en lecture seule.
-                    if (onDeleteImage != null)
+                      // Bouton retour (close)
                       Positioned(
                         top: 16,
-                        right: 16,
+                        left: 16,
                         child: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red, size: 32),
-                          tooltip: 'Supprimer l\'image',
+                          icon: const Icon(Icons.arrow_back,
+                              color: Colors.white, size: 32),
+                          tooltip: 'Fermer',
                           onPressed: () {
-                            onDeleteImage!(controller.page?.round() ?? initialIndex);
                             Navigator.of(context).pop();
                           },
                         ),
                       ),
-                  ],
+                      // Bouton suppression, absent en lecture seule.
+                      if (onDeleteImage != null)
+                        Positioned(
+                          top: 16,
+                          right: 16,
+                          child: IconButton(
+                            icon: const Icon(Icons.delete,
+                                color: Colors.red, size: 32),
+                            tooltip: 'Supprimer l\'image',
+                            // L'aperçu est refermé **avant** de déclencher la
+                            // suppression : celle-ci ouvre une confirmation de
+                            // façon synchrone, et un `pop` placé après aurait
+                            // refermé cette confirmation au lieu de l'aperçu.
+                            onPressed: () {
+                              final index =
+                                  controller.page?.round() ?? initialIndex;
+                              Navigator.of(context).pop();
+                              onDeleteImage!(index);
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
-        );
-      },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: img.isAsset
-            ? Image.asset(img.path, fit: BoxFit.cover)
-            : img.isNetwork
-                ? Image.network(img.path, fit: BoxFit.cover)
-                : Image.file(File(img.path), fit: BoxFit.cover),
+              );
+            },
+          );
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: img.isAsset
+              ? Image.asset(img.path,
+                  fit: BoxFit.cover, excludeFromSemantics: true)
+              : img.isNetwork
+                  ? Image.network(
+                      img.path,
+                      fit: BoxFit.cover,
+                      excludeFromSemantics: true,
+                      // Une URL devenue invalide ne doit pas casser la grille
+                      // entière : la vignette signale la panne et le reste de la
+                      // galerie continue de s'afficher.
+                      errorBuilder: (context, error, stack) => const ColoredBox(
+                        color: Colors.white10,
+                        child: Center(
+                          child: Icon(Icons.broken_image_outlined,
+                              color: Colors.white38),
+                        ),
+                      ),
+                    )
+                  : Image.file(File(img.path),
+                      fit: BoxFit.cover, excludeFromSemantics: true),
+        ),
       ),
     );
   }
@@ -163,7 +198,8 @@ typedef VoidCallback = void Function();
 class _ZoomableImageViewer extends StatefulWidget {
   final Widget imageWidget;
   final VoidCallback onSwipeDown;
-  const _ZoomableImageViewer({required this.imageWidget, required this.onSwipeDown});
+  const _ZoomableImageViewer(
+      {required this.imageWidget, required this.onSwipeDown});
 
   @override
   State<_ZoomableImageViewer> createState() => _ZoomableImageViewerState();
