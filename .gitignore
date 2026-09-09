@@ -70,3 +70,6 @@ lib/config/supabase_credentials.dart
 lib/firebase_options.dart
 android/app/google-services.json
 firebase.json
+
+# Identifiants des comptes de test (jamais versionnés)
+comptes-test.local
