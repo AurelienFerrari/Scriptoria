@@ -11,10 +11,13 @@ import '../../../helpers/mock_supabase_service.dart';
 import '../../../helpers/network_image_stub.dart';
 import '../../../helpers/room_harness.dart';
 
+/// [visibleTo] suit la convention de `images.visible_to` : `null` pour tous les
+/// membres, liste vide pour personne.
 Map<String, dynamic> _image({
   String id = 'image-1',
   String url = 'https://exemple.test/carte.png',
   String path = 'user-mj/campaign-campaign-1/carte.png',
+  List<String>? visibleTo = const [],
 }) =>
     {
       'id': id,
@@ -23,6 +26,7 @@ Map<String, dynamic> _image({
       'bucket': 'images',
       'path': path,
       'url': url,
+      'visible_to': visibleTo,
       'created_at': '2026-09-09T10:00:00Z',
     };
 
@@ -72,7 +76,7 @@ void main() {
       expect(find.bySemanticsLabel('Ajouter une image'), findsOneWidget);
       expect(
         find.text(
-          'Les images que vous publiez ici sont visibles par tous les joueurs.',
+          'Une image importée reste masquée : à vous de choisir qui la voit, image par image.',
         ),
         findsOneWidget,
       );
@@ -90,10 +94,9 @@ void main() {
 
       await pumpAs(tester, kMjId, 'mj');
 
-      // L'aperçu plein écran porte le bouton de suppression.
-      await tester.tap(find.bySemanticsLabel('Ouvrir l\'image 1'));
+      await tester.tap(find.byTooltip('Actions sur l\'image 1'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Supprimer l\'image'));
+      await tester.tap(find.text('Supprimer'));
       await tester.pumpAndSettle();
 
       expect(find.text('Retirer cette image ?'), findsOneWidget);
@@ -109,6 +112,115 @@ void main() {
       // Une fois au montage, une fois après la suppression.
       verify(() => service.getCampaignImages(kRoomId)).called(2);
       expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('voit les images masquées, contrairement aux joueurs',
+        (tester) async {
+      when(() => service.getCampaignImages(kRoomId))
+          .thenAnswer((_) async => [_image()]);
+
+      await pumpAs(tester, kMjId, 'mj');
+
+      expect(find.bySemanticsLabel('Visibilité : Masquée'), findsOneWidget);
+    });
+
+    testWidgets('ouvre la room à tous les joueurs depuis la boîte de visibilité',
+        (tester) async {
+      when(() => service.getCampaignImages(kRoomId))
+          .thenAnswer((_) async => [_image()]);
+      when(() => service.getCampaignMembers(kRoomId)).thenAnswer(
+        (_) async => [
+          testMember(userId: kMjId, role: 'mj', displayName: 'Aurélien'),
+          testMember(userId: kPlayerId, displayName: 'Camille'),
+        ],
+      );
+      when(() => service.updateImageVisibility(
+            imageId: any(named: 'imageId'),
+            visibleTo: any(named: 'visibleTo'),
+          )).thenAnswer((_) async {});
+
+      await pumpAs(tester, kMjId, 'mj');
+
+      await tester.tap(find.byTooltip('Actions sur l\'image 1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Visibilité'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Qui peut voir cette image ?'), findsOneWidget);
+      await tester.tap(find.text('Tous les joueurs'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Valider'));
+      await tester.pumpAndSettle();
+
+      // `null` ouvre l'image à tous les membres.
+      verify(() => service.updateImageVisibility(
+            imageId: 'image-1',
+            visibleTo: null,
+          )).called(1);
+    });
+
+    testWidgets('réserve une image à un joueur choisi', (tester) async {
+      when(() => service.getCampaignImages(kRoomId))
+          .thenAnswer((_) async => [_image()]);
+      when(() => service.getCampaignMembers(kRoomId)).thenAnswer(
+        (_) async => [
+          testMember(userId: kMjId, role: 'mj', displayName: 'Aurélien'),
+          testMember(userId: kPlayerId, displayName: 'Camille'),
+        ],
+      );
+      when(() => service.updateImageVisibility(
+            imageId: any(named: 'imageId'),
+            visibleTo: any(named: 'visibleTo'),
+          )).thenAnswer((_) async {});
+
+      await pumpAs(tester, kMjId, 'mj');
+
+      await tester.tap(find.byTooltip('Actions sur l\'image 1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Visibilité'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Joueurs choisis'));
+      await tester.pumpAndSettle();
+
+      // Le MJ ne figure pas dans la liste : il voit toujours ses images, l'y
+      // faire apparaître laisserait croire qu'il peut s'en exclure.
+      expect(find.text('Aurélien'), findsNothing);
+      expect(find.text('Camille'), findsOneWidget);
+
+      await tester.tap(find.text('Camille'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Valider'));
+      await tester.pumpAndSettle();
+
+      verify(() => service.updateImageVisibility(
+            imageId: 'image-1',
+            visibleTo: [kPlayerId],
+          )).called(1);
+    });
+
+    testWidgets('n\'écrit rien si la boîte de visibilité est annulée',
+        (tester) async {
+      when(() => service.getCampaignImages(kRoomId))
+          .thenAnswer((_) async => [_image()]);
+      when(() => service.getCampaignMembers(kRoomId))
+          .thenAnswer((_) async => []);
+
+      await pumpAs(tester, kMjId, 'mj');
+
+      await tester.tap(find.byTooltip('Actions sur l\'image 1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Visibilité'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Annuler'));
+      await tester.pumpAndSettle();
+
+      // Annuler doit rester sans effet : un `null` renvoyé par la boîte
+      // signifierait « tous les joueurs », soit l'inverse de l'intention.
+      verifyNever(() => service.updateImageVisibility(
+            imageId: any(named: 'imageId'),
+            visibleTo: any(named: 'visibleTo'),
+          ));
     });
   });
 

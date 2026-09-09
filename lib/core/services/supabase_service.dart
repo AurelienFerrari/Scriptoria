@@ -335,10 +335,15 @@ class SupabaseService {
   ///
   /// La policy `images_insert_own_mj` réserve la publication au MJ ; un joueur
   /// qui contournerait l'interface verrait son insertion refusée.
+  /// [visibleTo] désigne les destinataires : `null` pour tous les membres,
+  /// liste vide pour personne (l'image est préparée mais pas révélée), sinon
+  /// les joueurs autorisés. Une image arrive masquée par défaut, pour qu'une
+  /// révélation ne puisse pas fuiter le temps de la restreindre.
   Future<Map<String, dynamic>> addCampaignImage({
     required XFile file,
     required String campaignId,
     required String ownerId,
+    List<String>? visibleTo = const [],
   }) async {
     final path =
         '$ownerId/campaign-$campaignId/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
@@ -357,9 +362,24 @@ class SupabaseService {
           'bucket': galleryBucket,
           'path': path,
           'url': url,
+          'visible_to': visibleTo,
         })
         .select()
         .single();
+  }
+
+  /// Change les destinataires d'une image déjà publiée.
+  ///
+  /// Même convention que [addCampaignImage] : `null` ouvre l'image à tous les
+  /// membres, une liste vide la masque à tout le monde sauf au MJ.
+  Future<void> updateImageVisibility({
+    required String imageId,
+    required List<String>? visibleTo,
+  }) async {
+    await _client
+        .from('images')
+        .update({'visible_to': visibleTo})
+        .eq('id', imageId);
   }
 
   /// Images publiées dans une room, de la plus récente à la plus ancienne.

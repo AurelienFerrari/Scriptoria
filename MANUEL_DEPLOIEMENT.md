@@ -30,6 +30,8 @@ exécuter dans l'ordre (via l'éditeur SQL du dashboard Supabase, ou la CLI
 6. `20260909200000_campaign_images_access.sql` — ouvre la table `images` à la
    galerie partagée d'une room : lecture par les membres, publication réservée
    au MJ
+7. `20260909210000_image_visibility.sql` — colonne `images.visible_to` : le MJ
+   choisit, image par image, qui la voit (tous, personne, ou une sélection)
 
 Après application, vérifier qu'il n'y a pas d'avertissement de sécurité inattendu
 dans Database > Advisors du dashboard Supabase.

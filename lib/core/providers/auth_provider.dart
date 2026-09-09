@@ -127,11 +127,23 @@ class AuthProvider extends ChangeNotifier {
     required XFile file,
     required String campaignId,
     required String ownerId,
+    List<String>? visibleTo = const [],
   }) {
     return _supabaseService.addCampaignImage(
       file: file,
       campaignId: campaignId,
       ownerId: ownerId,
+      visibleTo: visibleTo,
+    );
+  }
+
+  Future<void> updateImageVisibility({
+    required String imageId,
+    required List<String>? visibleTo,
+  }) {
+    return _supabaseService.updateImageVisibility(
+      imageId: imageId,
+      visibleTo: visibleTo,
     );
   }
 

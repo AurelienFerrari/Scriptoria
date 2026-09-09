@@ -6,6 +6,7 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/room_provider.dart';
 import '../../../core/utils/friendly_error.dart';
 import 'gallery_grid.dart';
+import 'image_visibility_dialog.dart';
 
 /// Onglet « Contenus » d'une room : la galerie d'images publiée par le MJ.
 ///
@@ -118,6 +119,51 @@ class _RoomContentsPageState extends State<RoomContentsPage> {
     if (mounted) _reload();
   }
 
+  /// Convertit la colonne `visible_to` en badge affichable.
+  GalleryVisibility _visibilityOf(Map<String, dynamic> image) {
+    final visibleTo = image['visible_to'] as List<dynamic>?;
+    if (visibleTo == null) return GalleryVisibility.everyone;
+    if (visibleTo.isEmpty) return GalleryVisibility.nobody;
+    return GalleryVisibility.restricted;
+  }
+
+  List<String>? _visibleToOf(Map<String, dynamic> image) {
+    final visibleTo = image['visible_to'] as List<dynamic>?;
+    return visibleTo?.cast<String>().toList();
+  }
+
+  Future<void> _editVisibility(Map<String, dynamic> image) async {
+    final room = context.read<RoomProvider>();
+    final members = await context.read<AuthProvider>().getCampaignMembers(room.roomId);
+    if (!mounted) return;
+
+    final choice = await showImageVisibilityDialog(
+      context: context,
+      // Le MJ voit toujours ses images : l'inscrire dans la liste laisserait
+      // croire qu'il peut s'en exclure.
+      members: members.where((member) => member['role'] != 'mj').toList(),
+      current: _visibleToOf(image),
+    );
+
+    if (choice == null || !mounted) return;
+
+    try {
+      await context.read<AuthProvider>().updateImageVisibility(
+            imageId: image['id'] as String,
+            visibleTo: choice.visibleTo,
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(e))),
+        );
+      }
+      return;
+    }
+
+    if (mounted) _reload();
+  }
+
   @override
   Widget build(BuildContext context) {
     final room = context.watch<RoomProvider>();
@@ -156,7 +202,7 @@ class _RoomContentsPageState extends State<RoomContentsPage> {
             const SizedBox(height: 4),
             Text(
               room.isMj
-                  ? 'Les images que vous publiez ici sont visibles par tous les joueurs.'
+                  ? 'Une image importée reste masquée : à vous de choisir qui la voit, image par image.'
                   : 'Les images publiées par le maître du jeu.',
               style: const TextStyle(color: Colors.white54, fontSize: 13),
             ),
@@ -175,11 +221,21 @@ class _RoomContentsPageState extends State<RoomContentsPage> {
 
                 return GalleryGrid(
                   images: images
-                      .map((image) => GalleryImage.network(image['url'] as String))
+                      .map(
+                        (image) => GalleryImage.network(
+                          image['url'] as String,
+                          // Badge réservé au MJ : un joueur ne voit que ce à
+                          // quoi il a droit, lui indiquer une visibilité
+                          // n'aurait aucun sens.
+                          visibility: room.isMj ? _visibilityOf(image) : null,
+                        ),
+                      )
                       .toList(),
                   onAddImage: room.isMj && !_isUploading ? _addImage : null,
                   onDeleteImage:
                       room.isMj ? (index) => _removeImage(images[index]) : null,
+                  onEditVisibility:
+                      room.isMj ? (index) => _editVisibility(images[index]) : null,
                 );
               },
             ),

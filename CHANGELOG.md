@@ -11,6 +11,14 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   persistée (bucket Supabase `images` et table du même nom) et partagée avec
   toute la table. Le MJ publie et retire, les joueurs consultent — la règle
   est portée par la RLS, pas seulement par l'interface
+- Visibilité image par image : le MJ choisit qui voit chaque image — tous les
+  joueurs, personne, ou une sélection nominative. Une image importée arrive
+  **masquée**, pour qu'une révélation ne puisse pas fuiter le temps de la
+  restreindre. Un badge sur chaque vignette rappelle l'état au MJ, et le
+  filtrage est appliqué par la RLS : un joueur non destinataire ne peut pas
+  découvrir l'image, même en interrogeant l'API directement
+- Menu d'actions directement sur les vignettes (visibilité, suppression) :
+  il fallait auparavant ouvrir l'aperçu plein écran pour gérer une image
 - Nom accessible sur les vignettes de la galerie, qui ouvraient l'aperçu plein
   écran sans que rien ne l'annonce à un lecteur d'écran
 
