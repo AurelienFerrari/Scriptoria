@@ -6,6 +6,26 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté
+- Journal des jets de dés : les lancers ne restent plus sur le téléphone de
+  celui qui les fait, ils sont enregistrés et partagés avec toute la table.
+  Le dé gagne un onglet « Journal » qui liste les jets récents avec leur
+  auteur, leur détail et leur ancienneté
+- Jets secrets, réservés au MJ : un jet marqué secret n'est lisible que de
+  lui. La règle est appliquée par la RLS — un joueur ne peut pas masquer un
+  résultat, ni découvrir un jet secret en interrogeant l'API
+- Le MJ peut vider le journal de sa room entre deux séances
+
+### Modifié
+- L'historique local du lanceur de dés, qui disparaissait à la fermeture de
+  l'écran et n'était visible que de son auteur, est remplacé par ce journal
+  partagé
+
+### Corrigé
+- Ouvrir un outil de room (Dé, Frise, Relations) faisait planter l'écran :
+  une route poussée sort du `RoomProvider`, fourni sous le Navigator par
+  `RoomShell` — bogue B25
+
 ## [0.6.0] - 2026-09-09
 
 ### Ajouté

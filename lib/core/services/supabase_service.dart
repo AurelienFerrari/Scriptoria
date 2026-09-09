@@ -417,6 +417,85 @@ class SupabaseService {
     }
   }
 
+  // ============ JOURNAL DES JETS DE DÉS ============
+
+  /// Enregistre un jet dans le journal de la room.
+  ///
+  /// Un jet marqué [isSecret] n'est lisible que par le MJ ; la policy
+  /// `dice_rolls_insert_self` refuse ce drapeau à un joueur, sans quoi
+  /// n'importe qui pourrait masquer un résultat qui l'arrange.
+  Future<void> addDiceRoll({
+    required String campaignId,
+    required String userId,
+    required int sides,
+    required int diceCount,
+    required int modifier,
+    required List<int> results,
+    bool isSecret = false,
+  }) async {
+    await _client.from('dice_rolls').insert({
+      'campaign_id': campaignId,
+      'user_id': userId,
+      'sides': sides,
+      'dice_count': diceCount,
+      'modifier': modifier,
+      'results': results,
+      'is_secret': isSecret,
+    });
+  }
+
+  /// Jets de la room, du plus récent au plus ancien, avec le nom de leur
+  /// auteur.
+  ///
+  /// La RLS filtre déjà les jets secrets : un joueur n'en reçoit aucun.
+  /// Comme pour les membres, le profil demande une seconde requête —
+  /// `dice_rolls.user_id` référence `auth.users`, schéma que PostgREST
+  /// n'expose pas.
+  Future<List<Map<String, dynamic>>> getDiceRolls(
+    String campaignId, {
+    int limit = 50,
+  }) async {
+    try {
+      final rolls = await _client
+          .from('dice_rolls')
+          .select()
+          .eq('campaign_id', campaignId)
+          .order('created_at', ascending: false)
+          .limit(limit);
+
+      if (rolls.isEmpty) return [];
+
+      final profiles = await _client
+          .from('users')
+          .select('id, username, display_name')
+          .inFilter(
+            'id',
+            rolls.map((roll) => roll['user_id'] as String).toSet().toList(),
+          );
+
+      final profileById = {
+        for (final profile in profiles) profile['id'] as String: profile,
+      };
+
+      return rolls.map((roll) {
+        final profile = profileById[roll['user_id']];
+        return <String, dynamic>{
+          ...roll,
+          'username': profile?['username'],
+          'display_name': profile?['display_name'],
+        };
+      }).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Vide le journal d'une room. Réservé au MJ par
+  /// `dice_rolls_delete_mj`.
+  Future<void> clearDiceRolls(String campaignId) async {
+    await _client.from('dice_rolls').delete().eq('campaign_id', campaignId);
+  }
+
   // ============ REQUÊTES GÉNÉRIQUES ============
 
   /// Récupérer les campagnes d'un utilisateur
