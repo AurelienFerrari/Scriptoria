@@ -39,6 +39,9 @@ void main() {
         userId: any(named: 'userId'),
       ),
     ).thenAnswer((_) async => 'mj');
+    // L'onglet Paramètres liste les membres de la room.
+    when(() => mockSupabaseService.getCampaignMembers(any()))
+        .thenAnswer((_) async => []);
   });
 
   testWidgets('RoomShell affiche les vraies données de la room et change de page au tap', (

@@ -57,49 +57,55 @@ class _HomePageState extends State<HomePage> with RouteAware {
       future: _campaignsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: CircularProgressIndicator()),
+          return const Align(
+            alignment: Alignment.topCenter,
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: CircularProgressIndicator(),
+            ),
           );
         }
 
         final campaigns = snapshot.data ?? [];
         if (campaigns.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              "Vous n'avez pas encore de room. Créez-en une ou rejoignez-en une avec un code.",
-              style: TextStyle(color: Colors.grey),
+          // Aligné en haut : le parent `Expanded` donne toute la hauteur
+          // restante, sans quoi le message se retrouverait centré au milieu
+          // du vide.
+          return const Align(
+            alignment: Alignment.topLeft,
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                "Vous n'avez pas encore de room. Créez-en une ou rejoignez-en une avec un code.",
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
           );
         }
 
-        // Hauteur fixe (~2 cartes visibles) : la section reste compacte et
-        // défile sur elle-même plutôt que de pousser le reste de la page
-        // vers le bas quand il y a beaucoup de rooms.
-        return SizedBox(
-          height: 240,
-          child: ListView.separated(
-            itemCount: campaigns.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final campaign = campaigns[index];
-              return CampaignCard(
-                title: campaign['title'] as String? ?? 'Sans titre',
-                lastUpdate: formatLastUpdate(
-                  (campaign['updated_at'] ?? campaign['created_at']) as String?,
-                ),
-                imageUrl: campaign['icon_url'] as String?,
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => RoomShell(roomId: campaign['id'] as String),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
+        // La liste occupe la hauteur que lui donne son parent `Expanded` et
+        // défile sur elle-même : les boutons d'action restent ancrés en bas
+        // de l'écran quel que soit le nombre de rooms.
+        return ListView.separated(
+          itemCount: campaigns.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final campaign = campaigns[index];
+            return CampaignCard(
+              title: campaign['title'] as String? ?? 'Sans titre',
+              lastUpdate: formatLastUpdate(
+                (campaign['updated_at'] ?? campaign['created_at']) as String?,
+              ),
+              imageUrl: campaign['icon_url'] as String?,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => RoomShell(roomId: campaign['id'] as String),
+                  ),
+                );
+              },
+            );
+          },
         );
       },
     );
@@ -111,7 +117,8 @@ class _HomePageState extends State<HomePage> with RouteAware {
       appBar: AppBar(
         title: Row(
           children: [
-            Image.asset('assets/images/logo.png', height: 40, excludeFromSemantics: true),
+            Image.asset('assets/images/logo.png',
+                height: 40, excludeFromSemantics: true),
             const SizedBox(width: 12),
             const Text('Accueil'),
           ],
@@ -135,81 +142,87 @@ class _HomePageState extends State<HomePage> with RouteAware {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Campagnes en cours',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+      // Colonne plutôt que zone défilante : la liste des rooms absorbe la
+      // hauteur disponible et les deux boutons d'action restent ancrés en bas
+      // de l'écran. Sans cela, le retrait de la section « Derniers documents
+      // modifiés » (bogue B22) les laissait flotter au milieu du vide.
+      // `SafeArea` : sans elle, les boutons ancrés en bas passent sous la
+      // barre de navigation gestuelle du téléphone.
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Campagnes en cours',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            _buildCampaigns(),
-            // La section « Derniers documents modifiés » affichait deux
-            // entrées codées en dur, sur le premier écran vu après connexion
-            // et avec un `onTap` vide. Elle reviendra alimentée par les
-            // vraies notes de room, une fois celles-ci implémentées.
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/CreationRoom');
-                    },
-                    label: const Text(
-                      'Créer une room',
-                      style: TextStyle(
-                        color: Color(0xFFB39DDB),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
+              const SizedBox(height: 16),
+              Expanded(child: _buildCampaigns()),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/CreationRoom');
+                      },
+                      label: const Text(
+                        'Créer une room',
+                        style: TextStyle(
+                          color: Color(0xFFB39DDB),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      side: const BorderSide(color: Color(0xFFB39DDB), width: 2),
-                      backgroundColor: Colors.white.withOpacity(0.03),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(32),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        side: const BorderSide(
+                            color: Color(0xFFB39DDB), width: 2),
+                        backgroundColor: Colors.white.withOpacity(0.03),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(32),
+                        ),
+                        shadowColor: Colors.black.withOpacity(0.12),
+                        elevation: 2,
                       ),
-                      shadowColor: Colors.black.withOpacity(0.12),
-                      elevation: 2,
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/JoinRoom');
-                    },
-                    label: const Text(
-                      'Rejoindre une room',
-                      style: TextStyle(
-                        color: Color(0xFFB39DDB),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/JoinRoom');
+                      },
+                      label: const Text(
+                        'Rejoindre une room',
+                        style: TextStyle(
+                          color: Color(0xFFB39DDB),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      side: const BorderSide(color: Color(0xFFB39DDB), width: 2),
-                      backgroundColor: Colors.white.withOpacity(0.03),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(32),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        side: const BorderSide(
+                            color: Color(0xFFB39DDB), width: 2),
+                        backgroundColor: Colors.white.withOpacity(0.03),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(32),
+                        ),
+                        shadowColor: Colors.black.withOpacity(0.12),
+                        elevation: 2,
                       ),
-                      shadowColor: Colors.black.withOpacity(0.12),
-                      elevation: 2,
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
