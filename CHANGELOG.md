@@ -6,6 +6,8 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.7.0] - 2026-09-10
+
 ### Ajouté
 - Journal des jets de dés : les lancers ne restent plus sur le téléphone de
   celui qui les fait, ils sont enregistrés et partagés avec toute la table.
