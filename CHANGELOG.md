@@ -6,6 +6,16 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté
+- Lanceur de dés dans les outils de la room, en remplacement de l'écran
+  « Fonctionnalité Dé à venir » : dés usuels du jeu de rôle (d4 à d100),
+  nombre de dés, modificateur (`3d6+2`), réussite et échec critiques sur un
+  d20 seul, et historique des jets de la séance. Accessible au MJ comme aux
+  joueurs. La logique de tirage est isolée dans `features/room/domain/dice.dart`
+  avec une source d'aléa injectable, ce qui permet de tester des résultats
+  exacts plutôt qu'un simple encadrement. Le jet reste local : le diffuser à
+  toute la table suppose le temps réel, prévu plus tard
+
 ## [0.4.0] - 2026-09-09
 
 ### Ajouté
