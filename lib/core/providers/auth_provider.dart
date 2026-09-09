@@ -99,6 +99,10 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.joinCampaign(campaignId: campaignId, userId: userId);
   }
 
+  Future<String?> getMemberRole({required String campaignId, required String userId}) {
+    return _supabaseService.getMemberRole(campaignId: campaignId, userId: userId);
+  }
+
   Future<String?> uploadImage({
     required XFile file,
     required String bucket,
