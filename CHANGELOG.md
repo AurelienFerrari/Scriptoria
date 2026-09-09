@@ -21,6 +21,11 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   l'écran et n'était visible que de son auteur, est remplacé par ce journal
   partagé
 
+### Corrigé
+- Ouvrir un outil de room (Dé, Frise, Relations) faisait planter l'écran :
+  une route poussée sort du `RoomProvider`, fourni sous le Navigator par
+  `RoomShell` — bogue B25
+
 ## [0.6.0] - 2026-09-09
 
 ### Ajouté

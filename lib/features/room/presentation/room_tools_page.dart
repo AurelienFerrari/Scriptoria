@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'outils/de_page.dart';
 import 'outils/frise_page.dart';
 import 'outils/relations_page.dart';
+import 'room_route.dart';
 
 class RoomToolsPage extends StatelessWidget {
   const RoomToolsPage({Key? key}) : super(key: key);
@@ -30,10 +31,7 @@ class RoomToolsPage extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const DePage()),
-                );
+                pushRoomRoute(context, const DePage());
               },
             ),
             const SizedBox(height: 24),
@@ -48,10 +46,7 @@ class RoomToolsPage extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const FrisePage()),
-                );
+                pushRoomRoute(context, const FrisePage());
               },
             ),
             const SizedBox(height: 24),
@@ -66,10 +61,7 @@ class RoomToolsPage extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const RelationsPage()),
-                );
+                pushRoomRoute(context, const RelationsPage());
               },
             ),
           ],

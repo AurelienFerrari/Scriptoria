@@ -78,18 +78,32 @@ Future<RoomProvider> loadedRoomProvider({
   return room;
 }
 
-/// Enveloppe [child] dans les deux providers dont dépend tout écran de room.
+/// Enveloppe [child] dans les deux providers dont dépend tout écran de room,
+/// **en reproduisant leur position réelle dans l'arbre**.
+///
+/// `AuthProvider` est monté au-dessus du `MaterialApp`, comme dans
+/// `main.dart` : il traverse donc les routes. `RoomProvider` est monté à
+/// l'intérieur de la route, comme le fait `RoomShell` : une route poussée
+/// par-dessus en sort.
+///
+/// Cette distinction n'est pas cosmétique. Avec les deux providers placés
+/// au-dessus du `MaterialApp`, un écran atteint par `Navigator.push` trouvait
+/// le `RoomProvider` en test alors qu'il échouait dans l'app — c'est
+/// exactement le bogue B25.
 Widget wrapRoomScreen({
   required AuthProvider auth,
   required RoomProvider room,
   required Widget child,
   Map<String, WidgetBuilder> routes = const {},
 }) {
-  return MultiProvider(
-    providers: [
-      ChangeNotifierProvider<AuthProvider>.value(value: auth),
-      ChangeNotifierProvider<RoomProvider>.value(value: room),
-    ],
-    child: MaterialApp(home: child, routes: routes),
+  return ChangeNotifierProvider<AuthProvider>.value(
+    value: auth,
+    child: MaterialApp(
+      home: ChangeNotifierProvider<RoomProvider>.value(
+        value: room,
+        child: child,
+      ),
+      routes: routes,
+    ),
   );
 }
