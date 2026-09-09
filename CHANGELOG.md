@@ -6,6 +6,8 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.6.0] - 2026-09-09
+
 ### Ajouté
 - Onglet « Contenus » d'une room : la galerie d'images y est désormais
   persistée (bucket Supabase `images` et table du même nom) et partagée avec
