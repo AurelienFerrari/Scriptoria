@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'gallery_grid.dart';
 
-import 'package:image_picker/image_picker.dart';
-
-import '../../../core/providers/room_provider.dart';
-
-class RoomHomePage extends StatefulWidget {
+/// Accueil d'une room : son identité (icône, nom, description) et sa dernière
+/// mise à jour.
+///
+/// La galerie vivait ici, en mémoire seulement. Elle est passée dans l'onglet
+/// « Contenus », où elle est persistée et partagée — sa place logique, aux
+/// côtés des notes du MJ.
+class RoomHomePage extends StatelessWidget {
   final String roomName;
   final String? iconPath;
   final bool iconIsAsset;
@@ -25,23 +25,6 @@ class RoomHomePage extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<RoomHomePage> createState() => _RoomHomePageState();
-}
-
-class _RoomHomePageState extends State<RoomHomePage> {
-  final List<GalleryImage> _galleryImages = [];
-  final ImagePicker _picker = ImagePicker();
-
-  Future<void> _addImage() async {
-    final XFile? file = await _picker.pickImage(source: ImageSource.gallery);
-    if (file != null) {
-      setState(() {
-        _galleryImages.add(GalleryImage.file(file.path));
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -52,7 +35,7 @@ class _RoomHomePageState extends State<RoomHomePage> {
             Navigator.of(context).pop(); // Retour à la home page
           },
         ),
-        title: Text(widget.roomName),
+        title: Text(roomName),
         backgroundColor: const Color(0xFF161622),
       ),
       backgroundColor: const Color(0xFF161622),
@@ -61,7 +44,7 @@ class _RoomHomePageState extends State<RoomHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (widget.iconPath != null)
+            if (iconPath != null)
               Container(
                 width: 96,
                 height: 96,
@@ -71,16 +54,16 @@ class _RoomHomePageState extends State<RoomHomePage> {
                   color: Colors.grey.shade900,
                 ),
                 // Décorative : le nom de la room est affiché juste en dessous.
-                child: widget.iconIsAsset
-                    ? Image.asset(widget.iconPath!, fit: BoxFit.cover, excludeFromSemantics: true)
+                child: iconIsAsset
+                    ? Image.asset(iconPath!, fit: BoxFit.cover, excludeFromSemantics: true)
                     : Image.network(
-                        widget.iconPath!,
+                        iconPath!,
                         fit: BoxFit.cover,
                         excludeFromSemantics: true,
                       ),
               ),
             Text(
-              widget.roomName,
+              roomName,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 28,
@@ -90,46 +73,23 @@ class _RoomHomePageState extends State<RoomHomePage> {
             ),
             SizedBox(height: 12),
             Text(
-              widget.description,
+              description,
               style: TextStyle(fontSize: 16, color: Colors.white),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 32),
-            // Galerie d'images (GridView)
-            SizedBox(height: 24),
-            // Seul le MJ alimente la galerie ; les joueurs consultent ce
-            // qu'il y a publié. La galerie déménagera dans l'onglet Contenus
-            // quand elle sera persistée (les images ne vivent pour l'instant
-            // qu'en mémoire).
-            Builder(
-              builder: (context) {
-                final isMj = context.watch<RoomProvider>().isMj;
-                return GalleryGrid(
-                  images: _galleryImages,
-                  onAddImage: isMj ? _addImage : null,
-                  onDeleteImage: isMj
-                      ? (index) {
-                          setState(() {
-                            _galleryImages.removeAt(index);
-                          });
-                        }
-                      : null,
-                );
-              },
-            ),
-            SizedBox(height: 24),
+            const SizedBox(height: 40),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.update, color: Colors.white, size: 20),
                 SizedBox(width: 8),
                 Text(
-                  widget.lastUpdateText,
+                  lastUpdateText,
                   style: TextStyle(color: Colors.white, fontSize: 15),
                 ),
                 SizedBox(width: 8),
                 Text(
-                  widget.lastUpdate,
+                  lastUpdate,
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                 ),
               ],

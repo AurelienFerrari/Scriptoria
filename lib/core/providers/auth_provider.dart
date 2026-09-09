@@ -123,6 +123,46 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
+  Future<Map<String, dynamic>> addCampaignImage({
+    required XFile file,
+    required String campaignId,
+    required String ownerId,
+    List<String>? visibleTo = const [],
+  }) {
+    return _supabaseService.addCampaignImage(
+      file: file,
+      campaignId: campaignId,
+      ownerId: ownerId,
+      visibleTo: visibleTo,
+    );
+  }
+
+  Future<void> updateImageVisibility({
+    required String imageId,
+    required List<String>? visibleTo,
+  }) {
+    return _supabaseService.updateImageVisibility(
+      imageId: imageId,
+      visibleTo: visibleTo,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getCampaignImages(String campaignId) {
+    return _supabaseService.getCampaignImages(campaignId);
+  }
+
+  Future<void> removeCampaignImage({
+    required String imageId,
+    required String bucket,
+    required String path,
+  }) {
+    return _supabaseService.removeCampaignImage(
+      imageId: imageId,
+      bucket: bucket,
+      path: path,
+    );
+  }
+
   Future<String?> uploadImage({
     required XFile file,
     required String bucket,

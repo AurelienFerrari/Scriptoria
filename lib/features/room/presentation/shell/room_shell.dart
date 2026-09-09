@@ -5,7 +5,7 @@ import '../../../../core/providers/room_provider.dart';
 import '../../../../core/utils/format_last_update.dart';
 import '../../../../ui/widgets/room_navbar.dart';
 import '../room_home_page.dart';
-import '../room_map_page.dart';
+import '../room_contents_page.dart';
 import '../room_chat_page.dart';
 import '../room_settings_page.dart';
 import '../room_tools_page.dart';
@@ -80,7 +80,7 @@ class _RoomShellViewState extends State<_RoomShellView> {
         description: room.description,
         lastUpdate: formatLastUpdate(room.lastUpdateRaw),
       ),
-      const RoomMapPage(),
+      const RoomContentsPage(),
       const RoomToolsPage(),
       const RoomChatPage(),
       const RoomSettingsPage(),
