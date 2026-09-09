@@ -6,6 +6,8 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.4.0] - 2026-09-09
+
 ### Ajouté
 - Rôles dans une room : le créateur en est le **maître du jeu**, les autres
   membres sont des **joueurs**. Le rôle est stocké en base
@@ -18,12 +20,17 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   La base refuse de supprimer la ligne d'un MJ : une room ne peut pas se
   retrouver sans meneur
 - Renommage de la room depuis ses paramètres, réservé au MJ
+- Un joueur peut quitter une room de lui-même
 
 ### Modifié
 - `RoomSettingsPage` lit désormais l'état de la room dans le `RoomProvider`
   au lieu de recevoir `roomId` et `isCreator` en paramètres
 - Le commutateur « Room privée » est retiré : toutes les rooms sont privées
   et se rejoignent par code, le réglage n'avait aucun effet
+- La galerie d'une room est en lecture seule pour les joueurs : seul le MJ y
+  ajoute ou en retire des images
+- L'icône de lancement de l'application est le logo Scriptoria, celui déjà
+  affiché dans l'en-tête de l'accueil
 
 ### Corrigé
 - Les messages d'erreur ne prétendent plus connaître une cause qu'ils n'ont
