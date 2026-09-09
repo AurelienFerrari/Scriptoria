@@ -6,6 +6,25 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté
+- Rôles dans une room : le créateur en est le **maître du jeu**, les autres
+  membres sont des **joueurs**. Le rôle est stocké en base
+  (`campaign_members.role`) et appliqué par la RLS via les fonctions
+  `is_campaign_member` / `is_campaign_mj`, pas seulement masqué dans
+  l'interface. Un trigger inscrit le créateur comme MJ à la création de la
+  room, ce qui rend l'invariant indépendant du client
+- Liste des joueurs dans les paramètres de la room : membres, badge MJ,
+  code d'invitation copiable (MJ seul) et exclusion d'un joueur (MJ seul).
+  La base refuse de supprimer la ligne d'un MJ : une room ne peut pas se
+  retrouver sans meneur
+- Renommage de la room depuis ses paramètres, réservé au MJ
+
+### Modifié
+- `RoomSettingsPage` lit désormais l'état de la room dans le `RoomProvider`
+  au lieu de recevoir `roomId` et `isCreator` en paramètres
+- Le commutateur « Room privée » est retiré : toutes les rooms sont privées
+  et se rejoignent par code, le réglage n'avait aucun effet
+
 ### Corrigé
 - La section « Derniers documents modifiés » de l'accueil affichait deux
   documents codés en dur, cliquables mais sans effet, sur le premier écran vu

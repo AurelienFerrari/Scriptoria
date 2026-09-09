@@ -103,6 +103,26 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.getMemberRole(campaignId: campaignId, userId: userId);
   }
 
+  Future<List<Map<String, dynamic>>> getCampaignMembers(String campaignId) {
+    return _supabaseService.getCampaignMembers(campaignId);
+  }
+
+  Future<void> removeCampaignMember({required String campaignId, required String userId}) {
+    return _supabaseService.removeCampaignMember(campaignId: campaignId, userId: userId);
+  }
+
+  Future<Map<String, dynamic>?> updateCampaign({
+    required String campaignId,
+    String? title,
+    String? description,
+  }) {
+    return _supabaseService.updateCampaign(
+      campaignId: campaignId,
+      title: title,
+      description: description,
+    );
+  }
+
   Future<String?> uploadImage({
     required XFile file,
     required String bucket,

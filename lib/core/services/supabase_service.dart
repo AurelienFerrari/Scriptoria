@@ -406,6 +406,91 @@ class SupabaseService {
     }
   }
 
+  /// Membres d'une campagne, avec leur rôle et leur profil public.
+  ///
+  /// Deux requêtes plutôt qu'une imbrication PostgREST : `campaign_members`
+  /// référence `auth.users`, schéma que PostgREST n'expose pas, donc
+  /// `select('users(...)')` n'aurait aucune relation à suivre. La liste des
+  /// membres d'une room reste petite, le coût est négligeable.
+  ///
+  /// Le profil peut manquer si l'insertion dans `users` a échoué à
+  /// l'inscription : les champs sont alors `null`, à l'appelant de prévoir
+  /// un libellé de repli.
+  Future<List<Map<String, dynamic>>> getCampaignMembers(String campaignId) async {
+    try {
+      final memberships = await _client
+          .from('campaign_members')
+          .select('user_id, role, joined_at')
+          .eq('campaign_id', campaignId)
+          .order('joined_at');
+
+      if (memberships.isEmpty) return [];
+
+      final profiles = await _client
+          .from('users')
+          .select('id, username, display_name, avatar_url')
+          .inFilter(
+            'id',
+            memberships.map((m) => m['user_id'] as String).toList(),
+          );
+
+      final profileById = {
+        for (final profile in profiles) profile['id'] as String: profile,
+      };
+
+      return memberships.map((membership) {
+        final profile = profileById[membership['user_id']];
+        return <String, dynamic>{
+          'user_id': membership['user_id'],
+          'role': membership['role'],
+          'joined_at': membership['joined_at'],
+          'username': profile?['username'],
+          'display_name': profile?['display_name'],
+          'avatar_url': profile?['avatar_url'],
+        };
+      }).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Retire un membre d'une campagne.
+  ///
+  /// La policy `campaign_members_delete_self_or_mj` fait foi : seul le MJ (ou
+  /// le joueur lui-même) y parvient, et la ligne d'un MJ n'est jamais
+  /// supprimable — une campagne ne doit pas se retrouver sans meneur.
+  Future<void> removeCampaignMember({
+    required String campaignId,
+    required String userId,
+  }) async {
+    await _client
+        .from('campaign_members')
+        .delete()
+        .eq('campaign_id', campaignId)
+        .eq('user_id', userId);
+  }
+
+  /// Met à jour les champs modifiables d'une campagne et renvoie la ligne à
+  /// jour. La policy `campaigns_update_own` réserve l'écriture au créateur.
+  Future<Map<String, dynamic>?> updateCampaign({
+    required String campaignId,
+    String? title,
+    String? description,
+  }) async {
+    final payload = <String, dynamic>{
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+      if (title != null) 'title': title,
+      if (description != null) 'description': description,
+    };
+
+    return await _client
+        .from('campaigns')
+        .update(payload)
+        .eq('id', campaignId)
+        .select()
+        .maybeSingle();
+  }
+
   /// Crée une campagne (room) et renvoie la ligne créée
   Future<Map<String, dynamic>> createCampaign({
     required String creatorId,

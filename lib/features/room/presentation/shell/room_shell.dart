@@ -83,10 +83,7 @@ class _RoomShellViewState extends State<_RoomShellView> {
       const RoomMapPage(),
       const RoomToolsPage(),
       const RoomChatPage(),
-      RoomSettingsPage(
-        roomId: room.roomId,
-        isCreator: room.isMj,
-      ),
+      const RoomSettingsPage(),
     ];
 
     return Scaffold(

@@ -2,41 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:scriptoria/features/room/presentation/room_map_page.dart';
-import 'package:scriptoria/features/room/presentation/room_players_page.dart';
-import 'package:scriptoria/features/room/presentation/room_settings_page.dart';
+
+// `RoomPlayersPage` a été remplacée par `RoomPlayersSection`, intégrée aux
+// paramètres de la room : voir `room_settings_page_test.dart`, qui couvre
+// aussi `RoomSettingsPage` depuis qu'elle dépend du RoomProvider.
 
 void main() {
   testWidgets('RoomMapPage affiche son texte', (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: RoomMapPage()));
     expect(find.text('Carte de la room'), findsOneWidget);
-  });
-
-  testWidgets('RoomPlayersPage affiche son texte', (WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(home: RoomPlayersPage()));
-    expect(find.text('Joueurs de la room'), findsOneWidget);
-  });
-
-  testWidgets('RoomSettingsPage affiche les options de la room pour le créateur', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: RoomSettingsPage(roomId: 'room-1', isCreator: true)),
-    );
-
-    expect(find.text('Paramètres de la Room'), findsOneWidget);
-    expect(find.text('Nom de la room'), findsOneWidget);
-    expect(find.text('Room privée'), findsOneWidget);
-    expect(find.text('Supprimer la room'), findsOneWidget);
-  });
-
-  testWidgets("RoomSettingsPage cache le bouton supprimer pour un non-créateur", (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: RoomSettingsPage(roomId: 'room-1', isCreator: false)),
-    );
-
-    expect(find.text('Paramètres de la Room'), findsOneWidget);
-    expect(find.text('Supprimer la room'), findsNothing);
   });
 }
