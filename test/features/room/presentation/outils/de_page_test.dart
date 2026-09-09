@@ -135,4 +135,84 @@ void main() {
     // Toujours 1d20 : le nombre de dés ne peut pas tomber à zéro.
     expect(find.text('Lancer 1d20'), findsOneWidget);
   });
+
+  group('animation du jet', () {
+    testWidgets('affiche un dé distinct par dé lancé', (tester) async {
+      await tester.pumpWidget(_wrap(face: 5));
+
+      await tester.tap(find.text('d6'));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Augmenter : Nombre de dés'));
+      await tester.tap(find.byTooltip('Augmenter : Nombre de dés'));
+      await tester.pump();
+
+      await tester.tap(find.text('Lancer 3d6'));
+      await tester.pumpAndSettle();
+
+      // Trois faces affichées séparément, chacune à 5.
+      expect(find.text('5'), findsNWidgets(3));
+      expect(find.text('15'), findsOneWidget);
+    });
+
+    testWidgets(
+      'le calcul n\'apparaît qu\'une fois tous les dés posés',
+      (tester) async {
+        await tester.pumpWidget(_wrap(face: 5));
+
+        await tester.tap(find.text('d6'));
+        await tester.pump();
+        await tester.tap(find.byTooltip('Augmenter : Nombre de dés'));
+        await tester.pump();
+
+        await tester.tap(find.text('Lancer 2d6'));
+        await tester.pump();
+
+        // Pendant que les dés tournent, le total reste masqué.
+        await tester.pump(const Duration(milliseconds: 200));
+        final opacityEnRoute = tester.widget<AnimatedOpacity>(
+          find.byType(AnimatedOpacity),
+        );
+        expect(opacityEnRoute.opacity, 0);
+
+        // Une fois l'animation terminée, il s'affiche.
+        await tester.pumpAndSettle();
+        final opacityFinale = tester.widget<AnimatedOpacity>(
+          find.byType(AnimatedOpacity),
+        );
+        expect(opacityFinale.opacity, 1);
+        expect(find.text('10'), findsOneWidget);
+      },
+    );
+
+    testWidgets('les dés ne se figent pas tous en même temps', (tester) async {
+      await tester.pumpWidget(_wrap(face: 4));
+
+      await tester.tap(find.text('d6'));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Augmenter : Nombre de dés'));
+      await tester.pump();
+
+      await tester.tap(find.text('Lancer 2d6'));
+      // Première image : elle amorce le ticker, l'animation y est encore à 0.
+      await tester.pump();
+
+      // Juste après l'arrêt du premier dé : un seul est posé, l'autre tourne
+      // encore. Sans ce décalage, les deux s'immobiliseraient ensemble et
+      // l'animation n'aurait aucun relief.
+      await tester.pump(const Duration(milliseconds: 560));
+
+      final poses = tester
+          .widgetList<AnimatedScale>(find.byType(AnimatedScale))
+          .where((s) => s.scale == 1)
+          .length;
+      expect(poses, 1);
+
+      await tester.pumpAndSettle();
+      final posesFinales = tester
+          .widgetList<AnimatedScale>(find.byType(AnimatedScale))
+          .where((s) => s.scale == 1)
+          .length;
+      expect(posesFinales, 2);
+    });
+  });
 }

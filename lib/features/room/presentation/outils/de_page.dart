@@ -53,18 +53,53 @@ class _DePageState extends State<DePage> with SingleTickerProviderStateMixin {
 
   DiceRoll? get _lastRoll => _history.isEmpty ? null : _history.first;
 
+  /// Durée pendant laquelle le premier dé tourne avant de se figer.
+  static const int _spinMs = 520;
+
+  /// Décalage entre l'arrêt de deux dés successifs : ils se posent l'un après
+  /// l'autre, comme sur une table, au lieu de s'immobiliser tous ensemble.
+  static const int _staggerMs = 110;
+
+  /// Temps laissé après le dernier dé pour faire apparaître le calcul.
+  static const int _revealMs = 260;
+
+  int get _diceCount => _lastRoll?.results.length ?? 1;
+
+  /// Instant, en fraction de l'animation, où le dé [index] se fige.
+  double _settleFraction(int index) {
+    final total = _rollDurationMs(_diceCount);
+    return (_spinMs + index * _staggerMs) / total;
+  }
+
+  int _rollDurationMs(int count) =>
+      _spinMs + (count - 1) * _staggerMs + _revealMs;
+
+  /// Face affichée par un dé encore en train de tourner.
+  ///
+  /// Dérivée du temps plutôt que tirée au sort : l'animation reste
+  /// reproductible en test, et deux dés voisins ne montrent pas la même face.
+  int _spinningFace(int index, double t, int sides) {
+    final step = (t * 1000) ~/ 70;
+    return ((step * 7 + index * 13) % sides) + 1;
+  }
+
   void _roll() {
+    final roll = _roller.roll(_notation);
+
     setState(() {
-      _history.insert(0, _roller.roll(_notation));
+      _history.insert(0, roll);
       // Le détail complet reste consultable, mais on borne l'historique :
       // au-delà, c'est du bruit, et la liste n'est pas persistée de toute façon.
       if (_history.length > 20) _history.removeLast();
     });
+
+    _animation.duration = Duration(milliseconds: _rollDurationMs(roll.results.length));
     _animation.forward(from: 0);
 
-    final roll = _lastRoll!;
     // Le résultat change sans qu'aucun focus ne bouge : sans annonce
-    // explicite, un lecteur d'écran ne dirait rien du jet.
+    // explicite, un lecteur d'écran ne dirait rien du jet. Annoncé tout de
+    // suite : personne ne devrait avoir à attendre la fin d'une animation
+    // pour connaître son jet.
     SemanticsService.announce(
       'Résultat du jet ${roll.notation.label} : ${roll.total}',
       Directionality.of(context),
@@ -89,22 +124,36 @@ class _DePageState extends State<DePage> with SingleTickerProviderStateMixin {
         ],
       ),
       backgroundColor: _bgColor,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+      // Le bouton « Lancer » est ancré hors de la zone défilante : le bloc de
+      // résultat change de hauteur selon le nombre de dés, et l'action
+      // principale ne doit pas se déplacer sous le doigt entre deux jets.
+      // `SafeArea` l'écarte de la barre de navigation du téléphone.
+      body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildSidesSelector(),
-            const SizedBox(height: 24),
-            _buildCountAndModifier(),
-            const SizedBox(height: 24),
-            _buildResult(),
-            const SizedBox(height: 24),
-            _buildRollButton(),
-            if (_history.length > 1) ...[
-              const SizedBox(height: 32),
-              _buildHistory(),
-            ],
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildSidesSelector(),
+                    const SizedBox(height: 24),
+                    _buildCountAndModifier(),
+                    const SizedBox(height: 24),
+                    _buildResult(),
+                    if (_history.length > 1) ...[
+                      const SizedBox(height: 32),
+                      _buildHistory(),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+              child: _buildRollButton(),
+            ),
           ],
         ),
       ),
@@ -258,47 +307,90 @@ class _DePageState extends State<DePage> with SingleTickerProviderStateMixin {
                 ),
               ],
             )
-          : ScaleTransition(
-              scale: Tween<double>(begin: 0.85, end: 1).animate(
-                CurvedAnimation(parent: _animation, curve: Curves.easeOutBack),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    roll.notation.label,
-                    style: const TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${roll.total}',
-                    style: TextStyle(
-                      color: accent,
-                      fontSize: 56,
-                      fontWeight: FontWeight.bold,
-                      height: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    roll.detail,
-                    style: const TextStyle(color: Colors.white70, fontSize: 15),
-                    textAlign: TextAlign.center,
-                  ),
-                  if (mention != null) ...[
-                    const SizedBox(height: 12),
+          : AnimatedBuilder(
+              animation: _animation,
+              builder: (context, _) {
+                final t = _animation.value;
+                final lastSettle = _settleFraction(roll.results.length - 1);
+                final allSettled = t >= lastSettle;
+
+                return Column(
+                  children: [
                     Text(
-                      mention,
-                      style: TextStyle(
-                        color: accent,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                      roll.notation.label,
+                      style: const TextStyle(color: Colors.white70, fontSize: 16),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildDice(roll, t, accent),
+                    // Le calcul n'apparaît qu'une fois tous les dés posés :
+                    // afficher un total pendant que les dés tournent encore
+                    // enlèverait tout intérêt à les regarder.
+                    AnimatedOpacity(
+                      opacity: allSettled ? 1 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 20),
+                          if (roll.results.length > 1 || roll.notation.modifier != 0)
+                            Text(
+                              roll.detail,
+                              style: const TextStyle(color: Colors.white70, fontSize: 15),
+                              textAlign: TextAlign.center,
+                            ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${roll.total}',
+                            style: TextStyle(
+                              color: accent,
+                              fontSize: 52,
+                              fontWeight: FontWeight.bold,
+                              height: 1.1,
+                            ),
+                          ),
+                          if (mention != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              mention,
+                              style: TextStyle(
+                                color: accent,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],
-                ],
-              ),
+                );
+              },
             ),
+    );
+  }
+
+  /// Les dés du jet, chacun visible séparément.
+  Widget _buildDice(DiceRoll roll, double t, Color accent) {
+    final sides = roll.notation.sides;
+    // Les dés rétrécissent quand ils sont nombreux, pour que la ligne reste
+    // lisible sans déborder.
+    final size = roll.results.length > 8 ? 44.0 : 60.0;
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 10,
+      runSpacing: 10,
+      children: List.generate(roll.results.length, (i) {
+        final settled = t >= _settleFraction(i);
+        final value = settled ? roll.results[i] : _spinningFace(i, t, sides);
+
+        return _DieFace(
+          value: value,
+          size: size,
+          settled: settled,
+          accent: accent,
+        );
+      }),
     );
   }
 
@@ -343,6 +435,56 @@ class _DePageState extends State<DePage> with SingleTickerProviderStateMixin {
               ),
             ),
       ],
+    );
+  }
+}
+
+/// Un dé du jet, affiché seul.
+///
+/// Tant qu'il tourne, il est légèrement réduit et grisé ; à l'arrêt il reprend
+/// sa taille pleine et se colore. La différence entre « en train de tourner »
+/// et « posé » se lit donc sans avoir à comparer les chiffres.
+class _DieFace extends StatelessWidget {
+  final int value;
+  final double size;
+  final bool settled;
+  final Color accent;
+
+  const _DieFace({
+    required this.value,
+    required this.size,
+    required this.settled,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScale(
+      scale: settled ? 1 : 0.88,
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOutBack,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: settled ? accent.withOpacity(0.14) : Colors.white10,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: settled ? accent : Colors.white24,
+            width: settled ? 2 : 1,
+          ),
+        ),
+        child: Text(
+          '$value',
+          style: TextStyle(
+            color: settled ? Colors.white : Colors.white38,
+            fontSize: size * 0.42,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
 }
