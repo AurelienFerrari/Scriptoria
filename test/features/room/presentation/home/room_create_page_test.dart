@@ -82,6 +82,12 @@ void main() {
     when(() => mockSupabaseService.getCampaignById('campaign-1')).thenAnswer(
       (_) async => {'id': 'campaign-1', 'title': 'Mystères de l\'Ombre'},
     );
+    when(
+      () => mockSupabaseService.getMemberRole(
+        campaignId: any(named: 'campaignId'),
+        userId: any(named: 'userId'),
+      ),
+    ).thenAnswer((_) async => 'mj');
 
     await tester.pumpWidget(
       ChangeNotifierProvider.value(

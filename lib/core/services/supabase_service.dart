@@ -383,6 +383,29 @@ class SupabaseService {
     );
   }
 
+  /// Rôle d'un utilisateur dans une campagne : `'mj'`, `'player'`, ou `null`
+  /// s'il n'en est pas membre.
+  ///
+  /// Le rattachement du créateur en tant que MJ est assuré par un trigger
+  /// côté base (`campaigns_add_creator_as_mj`) : aucune campagne ne peut
+  /// exister sans meneur, même si le client échoue entre deux appels.
+  Future<String?> getMemberRole({
+    required String campaignId,
+    required String userId,
+  }) async {
+    try {
+      final row = await _client
+          .from('campaign_members')
+          .select('role')
+          .eq('campaign_id', campaignId)
+          .eq('user_id', userId)
+          .maybeSingle();
+      return row?['role'] as String?;
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Crée une campagne (room) et renvoie la ligne créée
   Future<Map<String, dynamic>> createCampaign({
     required String creatorId,

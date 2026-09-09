@@ -64,6 +64,12 @@ void main() {
           'updated_at': null,
         },
       );
+      when(
+        () => mockSupabaseService.getMemberRole(
+          campaignId: any(named: 'campaignId'),
+          userId: any(named: 'userId'),
+        ),
+      ).thenAnswer((_) async => 'mj');
 
       await tester.pumpWidget(_wrap(authProvider));
       await tester.pumpAndSettle();

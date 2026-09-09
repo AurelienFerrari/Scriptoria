@@ -33,6 +33,12 @@ void main() {
     mockSupabaseService = MockSupabaseService();
     authProvider = AuthProvider(supabaseService: mockSupabaseService);
     when(() => mockSupabaseService.getCurrentUser()).thenReturn(_testUser);
+    when(
+      () => mockSupabaseService.getMemberRole(
+        campaignId: any(named: 'campaignId'),
+        userId: any(named: 'userId'),
+      ),
+    ).thenAnswer((_) async => 'mj');
   });
 
   testWidgets('RoomShell affiche les vraies données de la room et change de page au tap', (
