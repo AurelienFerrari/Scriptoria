@@ -103,7 +103,8 @@ void main() {
           ));
     });
 
-    testWidgets('peut exclure un joueur après confirmation', (tester) async {
+    testWidgets('exclut un joueur, rafraîchit la liste, et sans erreur',
+        (tester) async {
       when(() => service.removeCampaignMember(
             campaignId: kRoomId,
             userId: kPlayerId,
@@ -122,6 +123,16 @@ void main() {
             campaignId: kRoomId,
             userId: kPlayerId,
           )).called(1);
+
+      // La liste doit être rechargée : une fois au montage, une fois après
+      // l'exclusion. C'est ce rechargement qui plantait dans le bogue B24,
+      // sans que la suppression elle-même échoue.
+      verify(() => service.getCampaignMembers(kRoomId)).called(2);
+
+      // Et surtout : aucun message d'erreur. Le test précédent se contentait
+      // de vérifier l'appel de suppression, ce qui laissait passer un écran
+      // qui affichait « une erreur est survenue » après un succès.
+      expect(find.byType(SnackBar), findsNothing);
     });
 
     testWidgets('n\'exclut personne si on annule', (tester) async {
@@ -143,6 +154,16 @@ void main() {
 
       expect(find.byTooltip('Exclure Aurélien'), findsNothing);
     });
+
+    testWidgets(
+      'ne propose pas de quitter la room : un meneur ne peut pas abandonner '
+      'sa table, il la supprime',
+      (tester) async {
+        await pumpAs(tester, kMjId, 'mj');
+
+        expect(find.text('Quitter la room'), findsNothing);
+      },
+    );
 
     testWidgets('copie le code d\'invitation dans le presse-papiers', (tester) async {
       String? copied;
@@ -221,6 +242,45 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(TextField), findsNothing);
+    });
+
+    testWidgets('peut quitter la room de lui-même', (tester) async {
+      when(() => service.removeCampaignMember(
+            campaignId: kRoomId,
+            userId: kPlayerId,
+          )).thenAnswer((_) async {});
+      when(() => service.getVisibleCampaigns(any())).thenAnswer((_) async => []);
+
+      await pumpAs(tester, kPlayerId, 'player');
+
+      expect(find.text('Quitter la room'), findsOneWidget);
+      await tester.tap(find.text('Quitter la room'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Quitter cette room ?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Quitter'));
+      await tester.pumpAndSettle();
+
+      verify(() => service.removeCampaignMember(
+            campaignId: kRoomId,
+            userId: kPlayerId,
+          )).called(1);
+      expect(find.byType(HomePage), findsOneWidget);
+    });
+
+    testWidgets('ne quitte pas la room si on annule', (tester) async {
+      await pumpAs(tester, kPlayerId, 'player');
+
+      await tester.tap(find.text('Quitter la room'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Annuler'));
+      await tester.pumpAndSettle();
+
+      verifyNever(() => service.removeCampaignMember(
+            campaignId: any(named: 'campaignId'),
+            userId: any(named: 'userId'),
+          ));
+      expect(find.text('Paramètres de la Room'), findsOneWidget);
     });
   });
 

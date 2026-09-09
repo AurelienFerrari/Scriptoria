@@ -26,6 +26,16 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   et se rejoignent par code, le réglage n'avait aucun effet
 
 ### Corrigé
+- Les messages d'erreur ne prétendent plus connaître une cause qu'ils n'ont
+  pas constatée : toute erreur non liée à l'authentification était rapportée
+  comme un problème de connexion internet, y compris une erreur de base de
+  données. Les erreurs Postgrest et Storage sont désormais traduites, dont le
+  refus de la RLS — bogue B23
+- L'exclusion d'un joueur affichait une erreur alors que la suppression avait
+  abouti : le rafraîchissement de la liste échouait, et son erreur était
+  attribuée à la suppression — bogue B24
+- Les boutons « Créer une room » et « Rejoindre une room » de l'accueil
+  passaient sous la barre de navigation du téléphone
 - La section « Derniers documents modifiés » de l'accueil affichait deux
   documents codés en dur, cliquables mais sans effet, sur le premier écran vu
   après connexion. Elle est retirée en attendant d'être alimentée par les

@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/room_provider.dart';
-import '../../../core/utils/friendly_auth_error.dart';
+import '../../../core/utils/friendly_error.dart';
 
 /// Liste des membres d'une room, affichée dans ses paramètres.
 ///
@@ -34,7 +34,11 @@ class _RoomPlayersSectionState extends State<RoomPlayersSection> {
   }
 
   void _reload() {
-    setState(() => _membersFuture = _loadMembers());
+    // Corps en bloc, et non en flèche : `setState(() => x = future)` renvoie
+    // la valeur affectée, donc un Future, ce que setState rejette.
+    setState(() {
+      _membersFuture = _loadMembers();
+    });
   }
 
   /// Nom à afficher, avec repli : un profil peut manquer si son insertion a
@@ -81,14 +85,20 @@ class _RoomPlayersSectionState extends State<RoomPlayersSection> {
             campaignId: room.roomId,
             userId: member['user_id'] as String,
           );
-      if (mounted) _reload();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyAuthErrorMessage(e))),
+          SnackBar(content: Text(friendlyErrorMessage(e))),
         );
       }
+      return;
     }
+
+    // Le rechargement est volontairement hors du `try` : une erreur de
+    // rafraîchissement n'est pas un échec d'exclusion, et les confondre a
+    // déjà fait rapporter comme « exclusion impossible » une suppression qui
+    // avait parfaitement abouti.
+    if (mounted) _reload();
   }
 
   @override

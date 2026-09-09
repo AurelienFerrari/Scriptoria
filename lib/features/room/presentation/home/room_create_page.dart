@@ -8,7 +8,7 @@ import 'dart:typed_data';
 import 'dart:io';
 
 import 'package:scriptoria/core/providers/auth_provider.dart';
-import 'package:scriptoria/core/utils/friendly_auth_error.dart';
+import 'package:scriptoria/core/utils/friendly_error.dart';
 import 'package:scriptoria/features/room/presentation/shell/room_shell.dart';
 
 /// Code d'invitation lisible (sans 0/O/1/I, souvent confondus).
@@ -84,7 +84,7 @@ class _RoomCreatePageState extends State<RoomCreatePage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyAuthErrorMessage(e))),
+          SnackBar(content: Text(friendlyErrorMessage(e))),
         );
       }
     } finally {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:scriptoria/core/providers/auth_provider.dart';
 import 'package:scriptoria/core/services/supabase_service.dart';
-import 'package:scriptoria/core/utils/friendly_auth_error.dart';
+import 'package:scriptoria/core/utils/friendly_error.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({Key? key}) : super(key: key);
@@ -195,7 +195,7 @@ class _RegisterPageState extends State<RegisterPage> {
     } catch (e) {
       print('[REGISTER] ERREUR lors de l\'inscription: $e');
       print('[REGISTER] Type d\'erreur: ${e.runtimeType}');
-      setState(() => _errorMessage = friendlyAuthErrorMessage(e));
+      setState(() => _errorMessage = friendlyErrorMessage(e));
     } finally {
       setState(() => _isLoading = false);
     }

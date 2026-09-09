@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:scriptoria/core/providers/auth_provider.dart';
-import 'package:scriptoria/core/utils/friendly_auth_error.dart';
+import 'package:scriptoria/core/utils/friendly_error.dart';
 import 'package:scriptoria/features/room/presentation/shell/room_shell.dart';
 
 class RoomJoinPage extends StatefulWidget {
@@ -53,7 +53,7 @@ class _RoomJoinPageState extends State<RoomJoinPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyAuthErrorMessage(e))),
+          SnackBar(content: Text(friendlyErrorMessage(e))),
         );
       }
     } finally {
