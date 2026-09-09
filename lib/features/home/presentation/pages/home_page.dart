@@ -4,7 +4,6 @@ import '../../../../core/navigation/route_observer.dart';
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/utils/format_last_update.dart';
 import '../../../campaigns/presentation/widgets/campaign_card.dart';
-import '../../../documents/presentation/widgets/document_list_item.dart';
 import '../../../room/presentation/shell/room_shell.dart';
 
 class HomePage extends StatefulWidget {
@@ -150,28 +149,10 @@ class _HomePageState extends State<HomePage> with RouteAware {
             ),
             const SizedBox(height: 16),
             _buildCampaigns(),
-            const SizedBox(height: 24),
-            const Text(
-              'Derniers documents modifiés',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            DocumentListItem(
-              title: 'Carte du Royaume',
-              subtitle: 'Mystères de l\'Ombre',
-              lastModified: 'il y a 1 jour',
-              onTap: () {},
-            ),
-            const Divider(),
-            DocumentListItem(
-              title: 'Personnages Importants',
-              subtitle: 'La Quête du Dragon',
-              lastModified: 'il y a 4 jours',
-              onTap: () {},
-            ),
+            // La section « Derniers documents modifiés » affichait deux
+            // entrées codées en dur, sur le premier écran vu après connexion
+            // et avec un `onTap` vide. Elle reviendra alimentée par les
+            // vraies notes de room, une fois celles-ci implémentées.
             const SizedBox(height: 24),
             Row(
               children: [

@@ -72,7 +72,6 @@ void main() {
       expect(find.text('Campagnes en cours'), findsOneWidget);
       expect(find.byType(CampaignCard), findsOneWidget);
       expect(find.text('Mystères de l\'Ombre'), findsWidgets);
-      expect(find.text('Derniers documents modifiés'), findsOneWidget);
       expect(find.text('Créer une room'), findsOneWidget);
       expect(find.text('Rejoindre une room'), findsOneWidget);
 
@@ -96,6 +95,11 @@ void main() {
         find.text("Vous n'avez pas encore de room. Créez-en une ou rejoignez-en une avec un code."),
         findsOneWidget,
       );
+      // Le bloc de démonstration « Derniers documents modifiés » a été retiré :
+      // il affichait deux entrées codées en dur sur le premier écran.
+      expect(find.text('Derniers documents modifiés'), findsNothing);
+      expect(find.text('Carte du Royaume'), findsNothing);
+      expect(find.text('Personnages Importants'), findsNothing);
     },
   );
 
