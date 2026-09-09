@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
@@ -54,32 +56,42 @@ class _DePageState extends State<DePage> with SingleTickerProviderStateMixin {
   DiceRoll? get _lastRoll => _history.isEmpty ? null : _history.first;
 
   /// Durée pendant laquelle le premier dé tourne avant de se figer.
-  static const int _spinMs = 520;
+  static const int _spinMs = 1150;
+
+  /// Temps laissé après le dernier dé pour faire apparaître le calcul.
+  static const int _revealMs = 320;
 
   /// Décalage entre l'arrêt de deux dés successifs : ils se posent l'un après
   /// l'autre, comme sur une table, au lieu de s'immobiliser tous ensemble.
-  static const int _staggerMs = 110;
-
-  /// Temps laissé après le dernier dé pour faire apparaître le calcul.
-  static const int _revealMs = 260;
+  ///
+  /// Resserré au-delà de six dés, sinon une poignée de dés ferait attendre
+  /// plusieurs secondes avant le total.
+  int _staggerMs(int count) => count > 6 ? 90 : 190;
 
   int get _diceCount => _lastRoll?.results.length ?? 1;
 
+  int _rollDurationMs(int count) =>
+      _spinMs + (count - 1) * _staggerMs(count) + _revealMs;
+
   /// Instant, en fraction de l'animation, où le dé [index] se fige.
   double _settleFraction(int index) {
-    final total = _rollDurationMs(_diceCount);
-    return (_spinMs + index * _staggerMs) / total;
+    final count = _diceCount;
+    return (_spinMs + index * _staggerMs(count)) / _rollDurationMs(count);
   }
-
-  int _rollDurationMs(int count) =>
-      _spinMs + (count - 1) * _staggerMs + _revealMs;
 
   /// Face affichée par un dé encore en train de tourner.
   ///
-  /// Dérivée du temps plutôt que tirée au sort : l'animation reste
-  /// reproductible en test, et deux dés voisins ne montrent pas la même face.
-  int _spinningFace(int index, double t, int sides) {
-    final step = (t * 1000) ~/ 70;
+  /// [spinProgress] va de 0 au lancer à 1 à l'arrêt de ce dé. La courbe
+  /// d'atténuation espace les changements de face à mesure qu'on approche de
+  /// l'arrêt : le dé ralentit au lieu de s'arrêter net, ce qui fait toute la
+  /// différence entre un chiffre qui clignote et un dé qui roule.
+  ///
+  /// La face est dérivée du temps et non tirée au sort : l'animation reste
+  /// reproductible en test, et deux dés voisins ne montrent jamais la même
+  /// face au même instant.
+  int _spinningFace(int index, double spinProgress, int sides) {
+    final eased = Curves.easeOutCubic.transform(spinProgress.clamp(0.0, 1.0));
+    final step = (eased * 22).floor();
     return ((step * 7 + index * 13) % sides) + 1;
   }
 
@@ -374,20 +386,23 @@ class _DePageState extends State<DePage> with SingleTickerProviderStateMixin {
     final sides = roll.notation.sides;
     // Les dés rétrécissent quand ils sont nombreux, pour que la ligne reste
     // lisible sans déborder.
-    final size = roll.results.length > 8 ? 44.0 : 60.0;
+    final size = roll.results.length > 8 ? 48.0 : 66.0;
 
     return Wrap(
       alignment: WrapAlignment.center,
-      spacing: 10,
-      runSpacing: 10,
+      spacing: 12,
+      runSpacing: 12,
       children: List.generate(roll.results.length, (i) {
-        final settled = t >= _settleFraction(i);
-        final value = settled ? roll.results[i] : _spinningFace(i, t, sides);
+        final settleAt = _settleFraction(i);
+        final settled = t >= settleAt;
+        final spinProgress = settleAt == 0 ? 1.0 : (t / settleAt).clamp(0.0, 1.0);
 
         return _DieFace(
-          value: value,
+          value: settled ? roll.results[i] : _spinningFace(i, spinProgress, sides),
+          sides: sides,
           size: size,
           settled: settled,
+          spinProgress: spinProgress,
           accent: accent,
         );
       }),
@@ -439,52 +454,213 @@ class _DePageState extends State<DePage> with SingleTickerProviderStateMixin {
   }
 }
 
+
 /// Un dé du jet, affiché seul.
 ///
-/// Tant qu'il tourne, il est légèrement réduit et grisé ; à l'arrêt il reprend
-/// sa taille pleine et se colore. La différence entre « en train de tourner »
-/// et « posé » se lit donc sans avoir à comparer les chiffres.
+/// Tant qu'il tourne, il oscille et flotte légèrement, sa face change de plus
+/// en plus lentement, et il reste grisé. À l'arrêt il se pose d'un rebond,
+/// reprend sa taille pleine et se colore : on voit lesquels sont figés sans
+/// avoir à comparer les chiffres.
 class _DieFace extends StatelessWidget {
   final int value;
+  final int sides;
   final double size;
   final bool settled;
+
+  /// 0 au lancer, 1 quand ce dé se fige.
+  final double spinProgress;
+
   final Color accent;
 
   const _DieFace({
     required this.value,
+    required this.sides,
     required this.size,
     required this.settled,
+    required this.spinProgress,
     required this.accent,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedScale(
-      scale: settled ? 1 : 0.88,
-      duration: const Duration(milliseconds: 160),
-      curve: Curves.easeOutBack,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: settled ? accent.withOpacity(0.14) : Colors.white10,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: settled ? accent : Colors.white24,
-            width: settled ? 2 : 1,
-          ),
-        ),
-        child: Text(
-          '$value',
-          style: TextStyle(
-            color: settled ? Colors.white : Colors.white38,
-            fontSize: size * 0.42,
-            fontWeight: FontWeight.bold,
+    // Oscillation et flottement amortis : l'amplitude décroît avec
+    // `1 - spinProgress`, le dé se stabilise donc au lieu de s'arrêter net.
+    final damping = 1 - spinProgress;
+    final wobble = settled ? 0.0 : math.sin(spinProgress * math.pi * 7) * 0.30 * damping;
+    final lift = settled ? 0.0 : -math.sin(spinProgress * math.pi * 5) * 7 * damping;
+
+    return Semantics(
+      label: settled ? 'Dé à $sides faces : $value' : 'Dé en cours de lancer',
+      child: Transform.translate(
+        offset: Offset(0, lift),
+        child: Transform.rotate(
+          angle: wobble,
+          child: AnimatedScale(
+            scale: settled ? 1 : 0.86,
+            // `elasticOut` donne au dé un rebond à l'atterrissage, là où une
+            // courbe classique le ferait simplement grandir.
+            duration: const Duration(milliseconds: 420),
+            curve: Curves.elasticOut,
+            child: CustomPaint(
+              size: Size.square(size),
+              painter: _DiePainter(
+                sides: sides,
+                settled: settled,
+                accent: accent,
+              ),
+              child: SizedBox.square(
+                dimension: size,
+                child: Center(
+                  child: Text(
+                    '$value',
+                    style: TextStyle(
+                      color: settled ? Colors.white : Colors.white38,
+                      fontSize: size * (value >= 100 ? 0.28 : 0.36),
+                      fontWeight: FontWeight.bold,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Dessine la silhouette d'un dé.
+///
+/// Chaque type de dé a sa forme reconnaissable à la table : triangle pour le
+/// d4, carré pour le d6, losange pour le d8, pentagone pour les d10 et d12,
+/// hexagone pour les d20 et d100. Un carré unique pour tous ferait perdre
+/// l'information la plus immédiate de l'écran — quel dé on lance.
+class _DiePainter extends CustomPainter {
+  final int sides;
+  final bool settled;
+  final Color accent;
+
+  _DiePainter({
+    required this.sides,
+    required this.settled,
+    required this.accent,
+  });
+
+  /// Nombre de côtés de la silhouette, et son orientation.
+  ({int corners, double rotation}) get _shape {
+    switch (sides) {
+      case 4:
+        return (corners: 3, rotation: 0);
+      case 6:
+        return (corners: 4, rotation: math.pi / 4);
+      case 8:
+        return (corners: 4, rotation: 0);
+      case 10:
+      case 12:
+        return (corners: 5, rotation: 0);
+      default:
+        return (corners: 6, rotation: 0);
+    }
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final shape = _shape;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 2;
+    final path = _roundedPolygon(
+      center: center,
+      radius: radius,
+      corners: shape.corners,
+      rotation: shape.rotation,
+      cornerRadius: size.width * 0.12,
+    );
+
+    // Halo derrière un dé posé : il le détache du fond sombre.
+    if (settled) {
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = accent.withOpacity(0.25)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      );
+    }
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: settled
+              ? [accent.withOpacity(0.30), accent.withOpacity(0.10)]
+              : [Colors.white12, Colors.white10],
+        ).createShader(Offset.zero & size),
+    );
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = settled ? 2.4 : 1.2
+        ..color = settled ? accent : Colors.white24,
+    );
+  }
+
+  /// Polygone régulier à coins arrondis.
+  ///
+  /// Les sommets vifs d'un polygone tracé naïvement font tache à côté du
+  /// reste de l'interface, qui est entièrement en angles adoucis.
+  Path _roundedPolygon({
+    required Offset center,
+    required double radius,
+    required int corners,
+    required double rotation,
+    required double cornerRadius,
+  }) {
+    final points = List.generate(corners, (i) {
+      // -pi/2 : le premier sommet pointe vers le haut.
+      final angle = rotation - math.pi / 2 + i * 2 * math.pi / corners;
+      return center + Offset(math.cos(angle), math.sin(angle)) * radius;
+    });
+
+    final path = Path();
+    for (var i = 0; i < corners; i++) {
+      final current = points[i];
+      final previous = points[(i - 1 + corners) % corners];
+      final next = points[(i + 1) % corners];
+
+      final toPrevious = _shorten(current, previous, cornerRadius);
+      final toNext = _shorten(current, next, cornerRadius);
+
+      if (i == 0) {
+        path.moveTo(toPrevious.dx, toPrevious.dy);
+      } else {
+        path.lineTo(toPrevious.dx, toPrevious.dy);
+      }
+      // Le sommet devient le point de contrôle : l'angle est remplacé par une
+      // courbe qui le frôle.
+      path.quadraticBezierTo(current.dx, current.dy, toNext.dx, toNext.dy);
+    }
+    path.close();
+    return path;
+  }
+
+  /// Point situé à [distance] de [from], en direction de [towards].
+  Offset _shorten(Offset from, Offset towards, double distance) {
+    final delta = towards - from;
+    final length = delta.distance;
+    if (length == 0) return from;
+    // Jamais au-delà du milieu du segment, sinon les arrondis de deux sommets
+    // voisins se chevauchent et la forme se replie sur elle-même.
+    final clamped = math.min(distance, length / 2);
+    return from + delta / length * clamped;
+  }
+
+  @override
+  bool shouldRepaint(_DiePainter oldDelegate) =>
+      oldDelegate.sides != sides ||
+      oldDelegate.settled != settled ||
+      oldDelegate.accent != accent;
 }

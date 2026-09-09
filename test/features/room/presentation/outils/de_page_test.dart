@@ -184,6 +184,58 @@ void main() {
       },
     );
 
+    testWidgets('la face affichée ralentit avant de se figer', (tester) async {
+      await tester.pumpWidget(_wrap(face: 3));
+
+      await tester.tap(find.text('Lancer 1d20'));
+      await tester.pump();
+
+      // On échantillonne la face montrée à intervalle constant. En début de
+      // rotation elle doit changer souvent, en fin de rotation rarement :
+      // c'est ce ralentissement qui distingue un dé qui roule d'un chiffre
+      // qui clignote.
+      // Cibler le dé par son étiquette d'accessibilité, et non le premier
+      // Text venu : les compteurs « Nombre de dés » et « Modificateur »
+      // affichent eux aussi des chiffres, et ils sont plus haut dans l'arbre.
+      String faceAffichee() => tester
+          .widget<Text>(
+            find
+                .descendant(
+                  of: find.byWidgetPredicate(
+                    (w) => w is Semantics && (w.properties.label ?? '').startsWith('Dé'),
+                  ),
+                  matching: find.byType(Text),
+                )
+                .first,
+          )
+          .data!;
+
+      var changementsDebut = 0;
+      var precedente = faceAffichee();
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        final courante = faceAffichee();
+        if (courante != precedente) changementsDebut++;
+        precedente = courante;
+      }
+
+      // On saute jusqu'aux derniers instants avant l'arrêt (1150 ms).
+      await tester.pump(const Duration(milliseconds: 550));
+
+      var changementsFin = 0;
+      precedente = faceAffichee();
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        final courante = faceAffichee();
+        if (courante != precedente) changementsFin++;
+        precedente = courante;
+      }
+
+      expect(changementsDebut, greaterThan(changementsFin));
+
+      await tester.pumpAndSettle();
+    });
+
     testWidgets('les dés ne se figent pas tous en même temps', (tester) async {
       await tester.pumpWidget(_wrap(face: 4));
 
@@ -196,10 +248,10 @@ void main() {
       // Première image : elle amorce le ticker, l'animation y est encore à 0.
       await tester.pump();
 
-      // Juste après l'arrêt du premier dé : un seul est posé, l'autre tourne
-      // encore. Sans ce décalage, les deux s'immobiliseraient ensemble et
-      // l'animation n'aurait aucun relief.
-      await tester.pump(const Duration(milliseconds: 560));
+      // Le premier dé se fige à 1150 ms, le second 190 ms plus tard : à
+      // 1250 ms, un seul est posé. Sans ce décalage, les deux s'immobili-
+      // seraient ensemble et l'animation n'aurait aucun relief.
+      await tester.pump(const Duration(milliseconds: 1250));
 
       final poses = tester
           .widgetList<AnimatedScale>(find.byType(AnimatedScale))
