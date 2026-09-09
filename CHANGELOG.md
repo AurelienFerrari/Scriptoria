@@ -6,6 +6,12 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Corrigé
+- La section « Derniers documents modifiés » de l'accueil affichait deux
+  documents codés en dur, cliquables mais sans effet, sur le premier écran vu
+  après connexion. Elle est retirée en attendant d'être alimentée par les
+  vraies notes de room — bogue B22
+
 ## [0.3.0] - 2026-08-09
 
 ### Ajouté
