@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:scriptoria/features/room/presentation/outils/de_page.dart';
 import 'package:scriptoria/features/room/presentation/room_tools_page.dart';
 
 void main() {
@@ -17,6 +18,7 @@ void main() {
     await tester.tap(find.text('Dé'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Fonctionnalité Dé à venir'), findsOneWidget);
+    expect(find.byType(DePage), findsOneWidget);
+    expect(find.text('Lancer 1d20'), findsOneWidget);
   });
 }

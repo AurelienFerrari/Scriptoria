@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:scriptoria/features/room/presentation/outils/de_page.dart';
 import 'package:scriptoria/features/room/presentation/outils/frise_page.dart';
 import 'package:scriptoria/features/room/presentation/outils/relations_page.dart';
 
-void main() {
-  testWidgets('DePage affiche son titre', (WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(home: DePage()));
-    expect(find.text('Dé'), findsOneWidget);
-    expect(find.text('Fonctionnalité Dé à venir'), findsOneWidget);
-  });
+// `DePage` a son propre fichier de test depuis qu'elle est implémentée :
+// voir `de_page_test.dart`.
 
+void main() {
   testWidgets('FrisePage affiche son titre', (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: FrisePage()));
     expect(find.text('Frise'), findsOneWidget);
