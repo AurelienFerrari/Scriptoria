@@ -39,6 +39,7 @@ void main() {
     mockSupabaseService = MockSupabaseService();
     authProvider = AuthProvider(supabaseService: mockSupabaseService);
     stubHomeScreen(mockSupabaseService);
+    stubRoomScreens(mockSupabaseService);
     when(() => mockSupabaseService.getCurrentUser()).thenReturn(_testUser);
   });
 

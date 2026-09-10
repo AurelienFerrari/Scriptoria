@@ -19,3 +19,19 @@ void stubHomeScreen(MockSupabaseService service) {
   when(() => service.getRecentActivity(limit: any(named: 'limit')))
       .thenAnswer((_) async => []);
 }
+
+/// Neutralise les requêtes que les écrans d'une room déclenchent à leur
+/// montage : fil, galerie, membres, notes, journal des jets.
+///
+/// Même logique que [stubHomeScreen] : un test qui traverse une room sans
+/// qu'elle soit son sujet — création, adhésion, navigation entre onglets —
+/// échouerait sur le premier appel non simulé. Un test qui s'intéresse à l'un
+/// de ces contenus redéclare simplement la méthode concernée ensuite.
+void stubRoomScreens(MockSupabaseService service) {
+  when(() => service.getRoomPosts(any())).thenAnswer((_) async => []);
+  when(() => service.getCampaignImages(any())).thenAnswer((_) async => []);
+  when(() => service.getCampaignMembers(any())).thenAnswer((_) async => []);
+  when(() => service.getRoomNotes(any())).thenAnswer((_) async => []);
+  when(() => service.getDiceRolls(any(), limit: any(named: 'limit')))
+      .thenAnswer((_) async => []);
+}

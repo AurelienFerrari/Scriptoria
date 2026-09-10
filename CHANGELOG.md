@@ -9,6 +9,14 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 ## [0.8.0] - 2026-09-10
 
 ### Ajouté
+- Fil de la room, sur son accueil : le MJ y publie des textes et des images à
+  destination de sa table. Chaque publication a ses propres destinataires —
+  tous les joueurs, ou une sélection nominative — choisis **avant** publication,
+  pour qu'une révélation adressée à un seul joueur ne passe pas par une seconde
+  où toute la table la voit. Le filtrage est appliqué par la RLS
+- L'accueil d'une room devient son écran principal : un en-tête compact porte
+  son identité, le fil occupe le reste. Il se limitait auparavant au nom et à
+  la description
 - Notes du maître du jeu, dans l'onglet « Contenus » : rédaction en Markdown,
   avec bascule entre saisie et aperçu rendu. Elles lui sont **strictement
   privées** — aucune policy n'ouvre leur lecture aux joueurs, qui ne voient

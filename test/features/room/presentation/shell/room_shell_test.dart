@@ -32,6 +32,7 @@ void main() {
   setUp(() {
     mockSupabaseService = MockSupabaseService();
     authProvider = AuthProvider(supabaseService: mockSupabaseService);
+    stubRoomScreens(mockSupabaseService);
     when(() => mockSupabaseService.getCurrentUser()).thenReturn(_testUser);
     when(
       () => mockSupabaseService.getMemberRole(

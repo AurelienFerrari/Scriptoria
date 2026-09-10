@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 
+import 'zoomable_image_viewer.dart';
+
 /// Galerie d'images d'une room.
 ///
 /// [onAddImage], [onDeleteImage] et [onEditVisibility] valent `null` en lecture
@@ -154,9 +156,8 @@ class GalleryGrid extends StatelessWidget {
                                           fit: BoxFit.contain)
                                       : Image.file(File(img.path),
                                           fit: BoxFit.contain);
-                              return _ZoomableImageViewer(
+                              return ZoomableImageViewer(
                                 imageWidget: imageWidget,
-                                onSwipeDown: () => Navigator.of(context).pop(),
                               );
                             },
                           ),
@@ -321,53 +322,3 @@ class GalleryImage {
         isNetwork = false;
 }
 
-// Widget zoomable et swipe down pour l'aperçu plein écran
-typedef VoidCallback = void Function();
-
-class _ZoomableImageViewer extends StatefulWidget {
-  final Widget imageWidget;
-  final VoidCallback onSwipeDown;
-  const _ZoomableImageViewer(
-      {required this.imageWidget, required this.onSwipeDown});
-
-  @override
-  State<_ZoomableImageViewer> createState() => _ZoomableImageViewerState();
-}
-
-class _ZoomableImageViewerState extends State<_ZoomableImageViewer> {
-  final TransformationController _controller = TransformationController();
-  double _currentScale = 1.0;
-
-  void _handleDoubleTapDown(TapDownDetails details) {
-    final position = details.localPosition;
-    setState(() {
-      if (_currentScale == 1.0) {
-        // Zoom sur le centre du widget (pas sur le coin)
-        final matrix = Matrix4.identity()
-          ..translate(-position.dx * 2, -position.dy * 2)
-          ..scale(3.0);
-        _controller.value = matrix;
-        _currentScale = 3.0;
-      } else {
-        _controller.value = Matrix4.identity();
-        _currentScale = 1.0;
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onDoubleTapDown: _handleDoubleTapDown,
-      onDoubleTap: () {}, // doit être présent pour déclencher onDoubleTapDown
-
-      child: InteractiveViewer(
-        transformationController: _controller,
-        minScale: 1,
-        maxScale: 4,
-        panEnabled: true,
-        child: widget.imageWidget,
-      ),
-    );
-  }
-}
