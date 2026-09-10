@@ -417,6 +417,59 @@ class SupabaseService {
     }
   }
 
+  // ============ NOTES DU MJ ============
+
+  /// Notes d'une room, de la plus récemment modifiée à la plus ancienne.
+  ///
+  /// Inutile de filtrer sur le rôle ici : la policy `room_notes_select_mj`
+  /// renvoie une liste vide à un joueur.
+  Future<List<Map<String, dynamic>>> getRoomNotes(String campaignId) async {
+    try {
+      return await _client
+          .from('room_notes')
+          .select()
+          .eq('campaign_id', campaignId)
+          .order('updated_at', ascending: false);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> createRoomNote({
+    required String campaignId,
+    required String authorId,
+    required String title,
+    String contentMd = '',
+  }) async {
+    return await _client
+        .from('room_notes')
+        .insert({
+          'campaign_id': campaignId,
+          'author_id': authorId,
+          'title': title,
+          'content_md': contentMd,
+        })
+        .select()
+        .single();
+  }
+
+  /// `updated_at` n'est pas envoyé : un trigger le tient côté base, une date
+  /// de modification dépendant du client ne voudrait rien dire.
+  Future<void> updateRoomNote({
+    required String noteId,
+    String? title,
+    String? contentMd,
+  }) async {
+    await _client.from('room_notes').update({
+      if (title != null) 'title': title,
+      if (contentMd != null) 'content_md': contentMd,
+    }).eq('id', noteId);
+  }
+
+  Future<void> deleteRoomNote(String noteId) async {
+    await _client.from('room_notes').delete().eq('id', noteId);
+  }
+
   // ============ JOURNAL DES JETS DE DÉS ============
 
   /// Enregistre un jet dans le journal de la room.

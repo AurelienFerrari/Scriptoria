@@ -6,6 +6,15 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté
+- Notes du maître du jeu, dans l'onglet « Contenus » : rédaction en Markdown,
+  avec bascule entre saisie et aperçu rendu. Elles lui sont **strictement
+  privées** — aucune policy n'ouvre leur lecture aux joueurs, qui ne voient
+  même pas la section
+- Import d'un fichier `.md` : son contenu devient une note ordinaire, éditable
+  comme les autres, plutôt qu'un fichier déposé dans Storage
+- Suppression d'une note, avec confirmation
+
 ## [0.7.0] - 2026-09-10
 
 ### Ajouté

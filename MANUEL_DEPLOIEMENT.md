@@ -34,6 +34,8 @@ exécuter dans l'ordre (via l'éditeur SQL du dashboard Supabase, ou la CLI
    choisit, image par image, qui la voit (tous, personne, ou une sélection)
 8. `20260909220000_dice_rolls.sql` — table `dice_rolls` : journal des jets de
    dés partagé avec la table, jets secrets réservés au MJ
+9. `20260910100000_room_notes.sql` — table `room_notes` : notes Markdown du MJ,
+   strictement privées (aucune policy n'ouvre la lecture aux joueurs)
 
 Après application, vérifier qu'il n'y a pas d'avertissement de sécurité inattendu
 dans Database > Advisors du dashboard Supabase.
