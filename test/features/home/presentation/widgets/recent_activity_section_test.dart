@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:scriptoria/features/home/presentation/widgets/recent_activity_section.dart';
+
+import '../../../../helpers/network_image_stub.dart';
 
 Widget _wrap(List<Map<String, dynamic>> activity, {void Function(String)? onOpen}) {
   return MaterialApp(
@@ -51,6 +55,30 @@ void main() {
     expect(find.byIcon(Icons.image_outlined), findsOneWidget);
     expect(find.textContaining('Mystères de l\'Ombre'), findsOneWidget);
     expect(find.textContaining('La Quête du Dragon'), findsOneWidget);
+  });
+
+  testWidgets('une image est représentée par sa propre vignette', (tester) async {
+    HttpOverrides.global = StubImageHttpOverrides();
+    addTearDown(() => HttpOverrides.global = null);
+
+    await tester.pumpWidget(_wrap(const [
+      {
+        'kind': 'image',
+        'id': 'image-1',
+        'label': 'Image partagée',
+        'url': 'https://exemple.test/carte.png',
+        'campaign_id': 'campaign-1',
+        'campaign_title': 'Mystères de l\'Ombre',
+        'at': '2026-09-10T10:00:00Z',
+      },
+    ]));
+    await tester.pumpAndSettle();
+
+    // La vignette réelle remplace l'icône générique : c'est l'information la
+    // plus utile qu'on puisse mettre à cet endroit.
+    final image = tester.widget<Image>(find.byType(Image));
+    expect(image.image, isA<NetworkImage>());
+    expect(find.byIcon(Icons.image_outlined), findsNothing);
   });
 
   testWidgets('chaque ligne ouvre la room concernée', (tester) async {

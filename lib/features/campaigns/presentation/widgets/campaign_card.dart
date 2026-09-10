@@ -109,7 +109,10 @@ class CampaignCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            // Centrée verticalement : alignée en haut, l'icône flottait au
+            // ras du titre alors que la colonne de texte est bien plus haute
+            // depuis l'ajout de la description et des compteurs.
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
