@@ -8,7 +8,6 @@ import 'package:scriptoria/core/providers/auth_provider.dart';
 import 'package:scriptoria/features/auth/presentation/pages/login_page.dart';
 import 'package:scriptoria/features/auth/presentation/pages/register_page.dart';
 import 'package:scriptoria/features/home/presentation/pages/home_page.dart';
-import 'package:scriptoria/features/settings/presentation/pages/settings_page.dart';
 import 'package:scriptoria/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:scriptoria/main.dart';
 
@@ -89,7 +88,7 @@ void main() {
     expect(find.byType(RegisterPage), findsOneWidget);
   });
 
-  testWidgets('MyApp résout les routes nommées /settings et /forgot-password', (
+  testWidgets('MyApp résout la route nommée /forgot-password', (
     WidgetTester tester,
   ) async {
     final mockSupabaseService = MockSupabaseService();
@@ -105,13 +104,8 @@ void main() {
 
     final navigator = tester.state<NavigatorState>(find.byType(Navigator));
 
-    navigator.pushNamed('/settings');
-    await tester.pumpAndSettle();
-    expect(find.byType(SettingsPage), findsOneWidget);
-
-    navigator.pop();
-    await tester.pumpAndSettle();
-
+    // La route `/settings` a disparu avec son écran : ses deux actions de
+    // compte sont passées sur la page de profil.
     navigator.pushNamed('/forgot-password');
     await tester.pumpAndSettle();
     expect(find.byType(ForgotPasswordPage), findsOneWidget);

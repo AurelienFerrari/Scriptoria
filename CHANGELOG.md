@@ -6,6 +6,20 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté
+- Actions de compte sur la page de profil : changement de mot de passe et
+  déconnexion. Elles vivaient dans un écran « Paramètres » qui n'affichait que
+  le texte « Page Paramètres » ; cet écran et sa route sont supprimés, le
+  compte tient sur un seul écran — bogue B27
+
+### Corrigé
+- La page Profil affichait trois compteurs restés à zéro et trois onglets de
+  contenu entièrement inventé — campagnes, personnages et historique de
+  sessions qui n'ont jamais existé en base. Elle se limite désormais à
+  l'identité réelle et au nombre de rooms, et son bouton « Modifier le
+  profil », qui ne faisait que changer une icône, enregistre réellement —
+  bogue B26
+
 ## [0.9.0] - 2026-09-10
 
 ### Ajouté
