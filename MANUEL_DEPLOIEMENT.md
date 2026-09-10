@@ -39,6 +39,8 @@ exécuter dans l'ordre (via l'éditeur SQL du dashboard Supabase, ou la CLI
 10. `20260910110000_campaign_overview.sql` — vue `campaign_overview` :
     compteurs (membres, images, notes) des cartes de l'accueil, en
     `security_invoker` pour que chacun ne compte que ce qu'il peut voir
+11. `20260910120000_room_posts.sql` — table `room_posts` : fil de la room,
+    publié par le MJ, chaque publication ayant ses propres destinataires
 
 Après application, vérifier qu'il n'y a pas d'avertissement de sécurité inattendu
 dans Database > Advisors du dashboard Supabase.

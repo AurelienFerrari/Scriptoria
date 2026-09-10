@@ -507,6 +507,96 @@ class SupabaseService {
     }
   }
 
+  // ============ FIL DE LA ROOM ============
+
+  /// Publications du fil d'une room, de la plus récente à la plus ancienne.
+  ///
+  /// Le filtrage par destinataire est fait par la RLS : un joueur ne reçoit
+  /// que ce qui lui est adressé, sans que cette méthode ait à le savoir.
+  Future<List<Map<String, dynamic>>> getRoomPosts(String campaignId) async {
+    try {
+      return await _client
+          .from('room_posts')
+          .select()
+          .eq('campaign_id', campaignId)
+          .order('created_at', ascending: false);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Publie sur le fil d'une room.
+  ///
+  /// L'image éventuelle est déposée dans le bucket `images` mais **pas**
+  /// enregistrée dans la table du même nom : sans quoi elle apparaîtrait aussi
+  /// dans la galerie, où le MJ ne l'a pas mise.
+  ///
+  /// [visibleTo] suit la convention habituelle : `null` pour tous les membres,
+  /// sinon les joueurs destinataires.
+  Future<Map<String, dynamic>> createRoomPost({
+    required String campaignId,
+    required String authorId,
+    String? body,
+    XFile? image,
+    List<String>? visibleTo,
+  }) async {
+    String? url;
+    String? path;
+
+    if (image != null) {
+      path =
+          '$authorId/post-$campaignId/${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+      url = await uploadImage(
+        file: image,
+        bucket: galleryBucket,
+        fileName: path,
+      );
+    }
+
+    return await _client
+        .from('room_posts')
+        .insert({
+          'campaign_id': campaignId,
+          'author_id': authorId,
+          'body': body,
+          'image_url': url,
+          'image_bucket': image == null ? null : galleryBucket,
+          'image_path': path,
+          'visible_to': visibleTo,
+        })
+        .select()
+        .single();
+  }
+
+  Future<void> updateRoomPostAudience({
+    required String postId,
+    required List<String>? visibleTo,
+  }) async {
+    await _client
+        .from('room_posts')
+        .update({'visible_to': visibleTo}).eq('id', postId);
+  }
+
+  /// Supprime une publication, et son image si elle en portait une.
+  ///
+  /// La ligne part en premier : c'est elle qui fait foi pour l'affichage. Un
+  /// fichier qui resterait sans elle n'est qu'un orphelin dans un bucket, là
+  /// où une ligne pointant vers un fichier absent afficherait une image
+  /// cassée.
+  Future<void> deleteRoomPost(Map<String, dynamic> post) async {
+    await _client.from('room_posts').delete().eq('id', post['id'] as String);
+
+    final bucket = post['image_bucket'] as String?;
+    final path = post['image_path'] as String?;
+    if (bucket == null || path == null) return;
+
+    try {
+      await deleteImage(bucket: bucket, fileName: path);
+    } catch (e) {
+      debugPrint('Fichier $path non supprimé du bucket $bucket : $e');
+    }
+  }
+
   // ============ NOTES DU MJ ============
 
   /// Notes d'une room, de la plus récemment modifiée à la plus ancienne.

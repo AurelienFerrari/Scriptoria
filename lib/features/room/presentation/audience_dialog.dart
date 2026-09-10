@@ -1,46 +1,63 @@
 import 'package:flutter/material.dart';
 
-/// Choix des destinataires d'une image, côté MJ.
+/// Destinataires choisis par le MJ, pour une image comme pour une publication.
 ///
-/// Renvoie la valeur à écrire dans `images.visible_to` : `null` pour tous les
-/// membres, liste vide pour personne, sinon les joueurs cochés. Renvoie
-/// `ImageVisibilityChoice.cancelled` si le MJ ferme sans valider — un `null`
-/// de retour signifierait « tous les joueurs », ce qui serait exactement le
-/// contraire de l'intention.
-class ImageVisibilityChoice {
+/// Porte la valeur à écrire dans une colonne `visible_to` : `null` pour tous
+/// les membres, liste vide pour personne, sinon les joueurs cochés.
+///
+/// La boîte renvoie `null` quand le MJ ferme sans valider. C'est pour cela que
+/// le choix est enveloppé dans un objet : un `null` de retour signifierait
+/// « tous les joueurs », soit exactement le contraire de l'intention.
+class AudienceChoice {
   final List<String>? visibleTo;
 
-  const ImageVisibilityChoice(this.visibleTo);
-
-  static const ImageVisibilityChoice? cancelled = null;
+  const AudienceChoice(this.visibleTo);
 }
 
-/// [members] ne contient que les joueurs : le MJ voit toujours ses propres
-/// images, l'inscrire dans la liste laisserait croire qu'il peut s'en exclure.
-Future<ImageVisibilityChoice?> showImageVisibilityDialog({
+/// [members] ne contient que les joueurs : le MJ reçoit toujours ce qu'il
+/// publie, l'inscrire dans la liste laisserait croire qu'il peut s'en exclure.
+///
+/// [allowNobody] ouvre le choix « personne pour l'instant ». Il a du sens pour
+/// une image préparée à l'avance, pas pour une annonce — on ne publie pas à
+/// destination de personne.
+Future<AudienceChoice?> showAudienceDialog({
   required BuildContext context,
   required List<Map<String, dynamic>> members,
   required List<String>? current,
+  String title = 'Qui peut voir cette image ?',
+  bool allowNobody = true,
 }) {
-  return showDialog<ImageVisibilityChoice>(
+  return showDialog<AudienceChoice>(
     context: context,
-    builder: (context) => _ImageVisibilityDialog(members: members, current: current),
+    builder: (context) => _AudienceDialog(
+      members: members,
+      current: current,
+      title: title,
+      allowNobody: allowNobody,
+    ),
   );
 }
 
 enum _Mode { everyone, nobody, selection }
 
-class _ImageVisibilityDialog extends StatefulWidget {
+class _AudienceDialog extends StatefulWidget {
   final List<Map<String, dynamic>> members;
   final List<String>? current;
+  final String title;
+  final bool allowNobody;
 
-  const _ImageVisibilityDialog({required this.members, required this.current});
+  const _AudienceDialog({
+    required this.members,
+    required this.current,
+    required this.title,
+    required this.allowNobody,
+  });
 
   @override
-  State<_ImageVisibilityDialog> createState() => _ImageVisibilityDialogState();
+  State<_AudienceDialog> createState() => _AudienceDialogState();
 }
 
-class _ImageVisibilityDialogState extends State<_ImageVisibilityDialog> {
+class _AudienceDialogState extends State<_AudienceDialog> {
   late _Mode _mode;
   late Set<String> _selected;
 
@@ -51,7 +68,10 @@ class _ImageVisibilityDialogState extends State<_ImageVisibilityDialog> {
     if (current == null) {
       _mode = _Mode.everyone;
     } else if (current.isEmpty) {
-      _mode = _Mode.nobody;
+      // Une valeur « personne » déjà en base reste affichable même quand
+      // l'option n'est pas proposée : mieux vaut montrer l'état réel que de
+      // le réécrire silencieusement à l'ouverture de la boîte.
+      _mode = widget.allowNobody ? _Mode.nobody : _Mode.selection;
     } else {
       _mode = _Mode.selection;
     }
@@ -71,18 +91,18 @@ class _ImageVisibilityDialogState extends State<_ImageVisibilityDialog> {
   void _submit() {
     switch (_mode) {
       case _Mode.everyone:
-        Navigator.pop(context, const ImageVisibilityChoice(null));
+        Navigator.pop(context, const AudienceChoice(null));
       case _Mode.nobody:
-        Navigator.pop(context, const ImageVisibilityChoice([]));
+        Navigator.pop(context, const AudienceChoice([]));
       case _Mode.selection:
-        Navigator.pop(context, ImageVisibilityChoice(_selected.toList()));
+        Navigator.pop(context, AudienceChoice(_selected.toList()));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Qui peut voir cette image ?'),
+      title: Text(widget.title),
       content: SizedBox(
         width: double.maxFinite,
         child: ListView(
@@ -94,13 +114,14 @@ class _ImageVisibilityDialogState extends State<_ImageVisibilityDialog> {
               title: const Text('Tous les joueurs'),
               onChanged: (value) => setState(() => _mode = value!),
             ),
-            RadioListTile<_Mode>(
-              value: _Mode.nobody,
-              groupValue: _mode,
-              title: const Text('Personne pour l\'instant'),
-              subtitle: const Text('Vous seul la voyez'),
-              onChanged: (value) => setState(() => _mode = value!),
-            ),
+            if (widget.allowNobody)
+              RadioListTile<_Mode>(
+                value: _Mode.nobody,
+                groupValue: _mode,
+                title: const Text('Personne pour l\'instant'),
+                subtitle: const Text('Vous seul la voyez'),
+                onChanged: (value) => setState(() => _mode = value!),
+              ),
             RadioListTile<_Mode>(
               value: _Mode.selection,
               groupValue: _mode,

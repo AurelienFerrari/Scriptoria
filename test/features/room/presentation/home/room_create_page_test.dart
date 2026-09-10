@@ -68,6 +68,7 @@ void main() {
   ) async {
     final mockSupabaseService = MockSupabaseService();
     final authProvider = AuthProvider(supabaseService: mockSupabaseService);
+    stubRoomScreens(mockSupabaseService);
     when(() => mockSupabaseService.getCurrentUser()).thenReturn(_testUser);
     when(
       () => mockSupabaseService.createCampaign(

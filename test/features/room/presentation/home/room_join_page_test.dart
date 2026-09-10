@@ -33,6 +33,7 @@ void main() {
   setUp(() {
     mockSupabaseService = MockSupabaseService();
     authProvider = AuthProvider(supabaseService: mockSupabaseService);
+    stubRoomScreens(mockSupabaseService);
   });
 
   testWidgets('RoomJoinPage affiche une erreur si le code est vide', (

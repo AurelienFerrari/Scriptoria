@@ -6,7 +6,7 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/room_provider.dart';
 import '../../../core/utils/friendly_error.dart';
 import 'gallery_grid.dart';
-import 'image_visibility_dialog.dart';
+import 'audience_dialog.dart';
 import 'notes/room_notes_section.dart';
 
 /// Onglet « Contenus » d'une room : la galerie d'images publiée par le MJ.
@@ -138,7 +138,7 @@ class _RoomContentsPageState extends State<RoomContentsPage> {
     final members = await context.read<AuthProvider>().getCampaignMembers(room.roomId);
     if (!mounted) return;
 
-    final choice = await showImageVisibilityDialog(
+    final choice = await showAudienceDialog(
       context: context,
       // Le MJ voit toujours ses images : l'inscrire dans la liste laisserait
       // croire qu'il peut s'en exclure.
