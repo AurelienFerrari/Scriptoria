@@ -6,6 +6,8 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.8.0] - 2026-09-10
+
 ### Ajouté
 - Notes du maître du jeu, dans l'onglet « Contenus » : rédaction en Markdown,
   avec bascule entre saisie et aperçu rendu. Elles lui sont **strictement
