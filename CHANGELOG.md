@@ -13,7 +13,19 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   même pas la section
 - Import d'un fichier `.md` : son contenu devient une note ordinaire, éditable
   comme les autres, plutôt qu'un fichier déposé dans Storage
+- Export d'une note en `.md` : le format d'export est celui du stockage, une
+  note exportée puis réimportée revient identique
 - Suppression d'une note, avec confirmation
+- Section « Activité récente » sur l'accueil, adaptée au rôle sans qu'aucun
+  test de rôle ne soit fait : le MJ y retrouve ses notes, un joueur les
+  images qu'on lui a ouvertes. Chaque ligne ouvre la room concernée
+- Cartes de room enrichies : description, et compteurs de membres, d'images et
+  de notes. Les compteurs viennent d'une vue en `security_invoker`, ils
+  reflètent donc ce que chacun a le droit de voir
+
+### Corrigé
+- La carte d'une room annonçait « MJ : » suivi d'une date de mise à jour,
+  vestige d'un ancien contenu de démonstration
 
 ## [0.7.0] - 2026-09-10
 

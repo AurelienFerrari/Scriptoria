@@ -55,7 +55,7 @@ void main() {
   ) async {
     final mockSupabaseService = MockSupabaseService();
     when(() => mockSupabaseService.getCurrentUser()).thenReturn(_testUser);
-    when(() => mockSupabaseService.getVisibleCampaigns('user-1')).thenAnswer((_) async => []);
+    stubHomeScreen(mockSupabaseService);
     when(() => mockSupabaseService.onAuthStateChange).thenAnswer((_) => const Stream.empty());
 
     await tester.pumpWidget(

@@ -137,6 +137,14 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
+  Future<Map<String, Map<String, int>>> getCampaignOverviews(List<String> campaignIds) {
+    return _supabaseService.getCampaignOverviews(campaignIds);
+  }
+
+  Future<List<Map<String, dynamic>>> getRecentActivity({int limit = 6}) {
+    return _supabaseService.getRecentActivity(limit: limit);
+  }
+
   Future<List<Map<String, dynamic>>> getRoomNotes(String campaignId) {
     return _supabaseService.getRoomNotes(campaignId);
   }

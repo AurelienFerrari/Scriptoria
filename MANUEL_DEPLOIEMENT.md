@@ -36,6 +36,9 @@ exécuter dans l'ordre (via l'éditeur SQL du dashboard Supabase, ou la CLI
    dés partagé avec la table, jets secrets réservés au MJ
 9. `20260910100000_room_notes.sql` — table `room_notes` : notes Markdown du MJ,
    strictement privées (aucune policy n'ouvre la lecture aux joueurs)
+10. `20260910110000_campaign_overview.sql` — vue `campaign_overview` :
+    compteurs (membres, images, notes) des cartes de l'accueil, en
+    `security_invoker` pour que chacun ne compte que ce qu'il peut voir
 
 Après application, vérifier qu'il n'y a pas d'avertissement de sécurité inattendu
 dans Database > Advisors du dashboard Supabase.

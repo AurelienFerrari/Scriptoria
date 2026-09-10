@@ -27,6 +27,7 @@ void main() {
   setUp(() {
     mockSupabaseService = MockSupabaseService();
     authProvider = AuthProvider(supabaseService: mockSupabaseService);
+    stubHomeScreen(mockSupabaseService);
   });
 
   testWidgets('ResetPasswordPage refuse des champs vides', (WidgetTester tester) async {

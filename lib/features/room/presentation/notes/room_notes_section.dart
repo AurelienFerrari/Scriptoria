@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -102,6 +103,44 @@ class _RoomNotesSectionState extends State<RoomNotesSection> {
     final title = file.name.replaceAll(RegExp(r'\.(md|markdown)$'), '');
 
     await _openEditor(title: title, content: content);
+  }
+
+  /// Enregistre la note sur l'appareil, en `.md`.
+  ///
+  /// Le format d'export est celui du stockage : une note exportée puis
+  /// réimportée revient identique, et reste lisible par n'importe quel éditeur
+  /// de texte — c'est tout l'intérêt d'avoir choisi Markdown.
+  Future<void> _exportMarkdown(Map<String, dynamic> note) async {
+    final title = note['title'] as String? ?? 'note';
+    final content = note['content_md'] as String? ?? '';
+
+    // Les caractères interdits dans un nom de fichier sont remplacés plutôt
+    // que retirés, pour que « Acte I : le départ » reste lisible.
+    final safeName = title.replaceAll(RegExp(r'[\\/:*?"<>|]'), '-').trim();
+
+    try {
+      final path = await FilePicker.saveFile(
+        dialogTitle: 'Enregistrer la note',
+        fileName: '$safeName.md',
+        type: FileType.custom,
+        allowedExtensions: const ['md'],
+        bytes: Uint8List.fromList(utf8.encode(content)),
+      );
+
+      if (!mounted) return;
+      // `null` : l'utilisateur a fermé le sélecteur, ce n'est pas une erreur.
+      if (path == null) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('« $title » enregistrée')),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(e))),
+        );
+      }
+    }
   }
 
   Future<void> _confirmAndDelete(Map<String, dynamic> note) async {
@@ -229,10 +268,20 @@ class _RoomNotesSectionState extends State<RoomNotesSection> {
           style: const TextStyle(color: Colors.white54, fontSize: 12),
         ),
         onTap: () => _openEditor(note: note),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.red),
-          tooltip: 'Supprimer « ${note['title']} »',
-          onPressed: () => _confirmAndDelete(note),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.download_outlined, color: Colors.white70),
+              tooltip: 'Télécharger « ${note['title']} »',
+              onPressed: () => _exportMarkdown(note),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              tooltip: 'Supprimer « ${note['title']} »',
+              onPressed: () => _confirmAndDelete(note),
+            ),
+          ],
         ),
       ),
     );
