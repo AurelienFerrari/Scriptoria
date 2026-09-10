@@ -6,6 +6,8 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.10.0] - 2026-09-10
+
 ### Ajouté
 - Actions de compte sur la page de profil : changement de mot de passe et
   déconnexion. Elles vivaient dans un écran « Paramètres » qui n'affichait que
