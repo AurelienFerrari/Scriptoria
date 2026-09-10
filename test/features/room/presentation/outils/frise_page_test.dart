@@ -71,6 +71,46 @@ void main() {
     verify(() => service.getTimelineEvents(kRoomId)).called(1);
   });
 
+  group('récit long', () {
+    // Assez long pour déborder d'une ligne à la largeur de l'écran de test.
+    const longDescription =
+        'La ville tombe en trois jours. Les remparts cèdent au matin du '
+        'deuxième, et la garde se replie vers la citadelle sans que personne '
+        'ait vu passer le signal convenu la veille au soir.';
+
+    testWidgets('replie le récit et propose de le déplier', (tester) async {
+      when(() => service.getTimelineEvents(kRoomId)).thenAnswer(
+        (_) async => [_event(description: longDescription)],
+      );
+
+      await pumpAs(tester, kPlayerId, 'player');
+
+      expect(find.text('Voir plus'), findsOneWidget);
+      expect(find.text('Voir moins'), findsNothing);
+
+      final replie = tester.widget<Text>(find.text(longDescription));
+      expect(replie.maxLines, 1);
+
+      await tester.tap(find.text('Voir plus'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Voir moins'), findsOneWidget);
+      final deplie = tester.widget<Text>(find.text(longDescription));
+      expect(deplie.maxLines, isNull);
+    });
+
+    testWidgets('ne propose rien sur un récit qui tient sur une ligne',
+        (tester) async {
+      when(() => service.getTimelineEvents(kRoomId))
+          .thenAnswer((_) async => [_event(description: 'Trois jours.')]);
+
+      await pumpAs(tester, kPlayerId, 'player');
+
+      expect(find.text('Trois jours.'), findsOneWidget);
+      expect(find.text('Voir plus'), findsNothing);
+    });
+  });
+
   group('vue MJ', () {
     testWidgets('ouvre l\'éditeur sur la place suivante de la frise',
         (tester) async {
