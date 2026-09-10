@@ -6,7 +6,7 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
-## [0.8.0] - 2026-09-10
+## [0.9.0] - 2026-09-10
 
 ### Ajouté
 - Fil de la room, sur son accueil : le MJ y publie des textes et des images à
@@ -17,6 +17,13 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 - L'accueil d'une room devient son écran principal : un en-tête compact porte
   son identité, le fil occupe le reste. Il se limitait auparavant au nom et à
   la description
+- Un texte long y est replié à une ligne, dépliable par « Voir plus » : sans
+  cela, une publication de trente lignes ferait une carte haute de trois écrans
+- L'image d'une publication s'ouvre en plein écran, zoomable
+
+## [0.8.0] - 2026-09-10
+
+### Ajouté
 - Notes du maître du jeu, dans l'onglet « Contenus » : rédaction en Markdown,
   avec bascule entre saisie et aperçu rendu. Elles lui sont **strictement
   privées** — aucune policy n'ouvre leur lecture aux joueurs, qui ne voient
