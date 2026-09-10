@@ -137,6 +137,48 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
+  Future<Map<String, Map<String, int>>> getCampaignOverviews(List<String> campaignIds) {
+    return _supabaseService.getCampaignOverviews(campaignIds);
+  }
+
+  Future<List<Map<String, dynamic>>> getRecentActivity({int limit = 6}) {
+    return _supabaseService.getRecentActivity(limit: limit);
+  }
+
+  Future<List<Map<String, dynamic>>> getRoomNotes(String campaignId) {
+    return _supabaseService.getRoomNotes(campaignId);
+  }
+
+  Future<Map<String, dynamic>> createRoomNote({
+    required String campaignId,
+    required String authorId,
+    required String title,
+    String contentMd = '',
+  }) {
+    return _supabaseService.createRoomNote(
+      campaignId: campaignId,
+      authorId: authorId,
+      title: title,
+      contentMd: contentMd,
+    );
+  }
+
+  Future<void> updateRoomNote({
+    required String noteId,
+    String? title,
+    String? contentMd,
+  }) {
+    return _supabaseService.updateRoomNote(
+      noteId: noteId,
+      title: title,
+      contentMd: contentMd,
+    );
+  }
+
+  Future<void> deleteRoomNote(String noteId) {
+    return _supabaseService.deleteRoomNote(noteId);
+  }
+
   Future<void> addDiceRoll({
     required String campaignId,
     required String userId,

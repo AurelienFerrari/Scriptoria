@@ -17,6 +17,7 @@ void main() {
   setUp(() {
     service = MockSupabaseService();
     auth = AuthProvider(supabaseService: service);
+    stubHomeScreen(service);
     when(() => service.getCampaignMembers(kRoomId)).thenAnswer(
       (_) async => [
         testMember(userId: kMjId, role: 'mj', displayName: 'Aurélien'),

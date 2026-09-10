@@ -7,6 +7,7 @@ import '../../../core/providers/room_provider.dart';
 import '../../../core/utils/friendly_error.dart';
 import 'gallery_grid.dart';
 import 'image_visibility_dialog.dart';
+import 'notes/room_notes_section.dart';
 
 /// Onglet « Contenus » d'une room : la galerie d'images publiée par le MJ.
 ///
@@ -239,6 +240,16 @@ class _RoomContentsPageState extends State<RoomContentsPage> {
                 );
               },
             ),
+            // Les notes ne sont montées que pour le MJ. Ce n'est pas ce qui
+            // les protège — la policy `room_notes_select_mj` s'en charge —
+            // mais afficher une section vide à un joueur lui suggérerait
+            // qu'il existe quelque chose qu'on lui cache.
+            if (room.isMj) ...[
+              const SizedBox(height: 40),
+              const Divider(color: Colors.white12),
+              const SizedBox(height: 24),
+              const RoomNotesSection(),
+            ],
           ],
         ),
       ),

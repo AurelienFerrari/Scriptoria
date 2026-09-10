@@ -417,6 +417,149 @@ class SupabaseService {
     }
   }
 
+  // ============ ACCUEIL ============
+
+  /// Compteurs (membres, images, notes) des campagnes données, indexés par
+  /// identifiant de campagne.
+  ///
+  /// Une seule requête pour toute la liste, via la vue `campaign_overview`.
+  /// Celle-ci s'exécute en `security_invoker`, si bien que chacun obtient les
+  /// compteurs de ce qu'il a le droit de voir : un joueur ne compte que les
+  /// images qui lui sont ouvertes, et jamais les notes du MJ.
+  Future<Map<String, Map<String, int>>> getCampaignOverviews(
+    List<String> campaignIds,
+  ) async {
+    if (campaignIds.isEmpty) return {};
+
+    try {
+      final rows = await _client
+          .from('campaign_overview')
+          .select()
+          .inFilter('campaign_id', campaignIds);
+
+      return {
+        for (final row in rows)
+          row['campaign_id'] as String: {
+            'members': (row['member_count'] as num?)?.toInt() ?? 0,
+            'images': (row['image_count'] as num?)?.toInt() ?? 0,
+            'notes': (row['note_count'] as num?)?.toInt() ?? 0,
+          },
+      };
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /// Dernières activités visibles par l'utilisateur, toutes rooms confondues.
+  ///
+  /// Notes et images sont récupérées séparément puis fusionnées par date. La
+  /// RLS fait le tri par rôle sans qu'on ait à le demander : un MJ récupère
+  /// ses notes, un joueur n'en reçoit aucune et ne voit que les images qui lui
+  /// ont été ouvertes.
+  Future<List<Map<String, dynamic>>> getRecentActivity({int limit = 6}) async {
+    try {
+      final notes = await _client
+          .from('room_notes')
+          .select('id, title, updated_at, campaign_id, campaigns(title)')
+          .order('updated_at', ascending: false)
+          .limit(limit);
+
+      final images = await _client
+          .from('images')
+          .select('id, url, created_at, campaign_id, campaigns(title)')
+          .not('campaign_id', 'is', null)
+          .order('created_at', ascending: false)
+          .limit(limit);
+
+      String campaignTitle(Map<String, dynamic> row) =>
+          (row['campaigns'] as Map<String, dynamic>?)?['title'] as String? ??
+          'Room';
+
+      final activity = <Map<String, dynamic>>[
+        for (final note in notes)
+          {
+            'kind': 'note',
+            'id': note['id'],
+            'label': note['title'],
+            'campaign_id': note['campaign_id'],
+            'campaign_title': campaignTitle(note),
+            'at': note['updated_at'],
+          },
+        for (final image in images)
+          {
+            'kind': 'image',
+            'id': image['id'],
+            'label': 'Image partagée',
+            'url': image['url'],
+            'campaign_id': image['campaign_id'],
+            'campaign_title': campaignTitle(image),
+            'at': image['created_at'],
+          },
+      ];
+
+      activity.sort(
+        (a, b) => (b['at'] as String? ?? '').compareTo(a['at'] as String? ?? ''),
+      );
+
+      return activity.take(limit).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // ============ NOTES DU MJ ============
+
+  /// Notes d'une room, de la plus récemment modifiée à la plus ancienne.
+  ///
+  /// Inutile de filtrer sur le rôle ici : la policy `room_notes_select_mj`
+  /// renvoie une liste vide à un joueur.
+  Future<List<Map<String, dynamic>>> getRoomNotes(String campaignId) async {
+    try {
+      return await _client
+          .from('room_notes')
+          .select()
+          .eq('campaign_id', campaignId)
+          .order('updated_at', ascending: false);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> createRoomNote({
+    required String campaignId,
+    required String authorId,
+    required String title,
+    String contentMd = '',
+  }) async {
+    return await _client
+        .from('room_notes')
+        .insert({
+          'campaign_id': campaignId,
+          'author_id': authorId,
+          'title': title,
+          'content_md': contentMd,
+        })
+        .select()
+        .single();
+  }
+
+  /// `updated_at` n'est pas envoyé : un trigger le tient côté base, une date
+  /// de modification dépendant du client ne voudrait rien dire.
+  Future<void> updateRoomNote({
+    required String noteId,
+    String? title,
+    String? contentMd,
+  }) async {
+    await _client.from('room_notes').update({
+      if (title != null) 'title': title,
+      if (contentMd != null) 'content_md': contentMd,
+    }).eq('id', noteId);
+  }
+
+  Future<void> deleteRoomNote(String noteId) async {
+    await _client.from('room_notes').delete().eq('id', noteId);
+  }
+
   // ============ JOURNAL DES JETS DE DÉS ============
 
   /// Enregistre un jet dans le journal de la room.

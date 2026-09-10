@@ -4,6 +4,7 @@ import '../../../../core/navigation/route_observer.dart';
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/utils/format_last_update.dart';
 import '../../../campaigns/presentation/widgets/campaign_card.dart';
+import '../widgets/recent_activity_section.dart';
 import '../../../room/presentation/shell/room_shell.dart';
 
 class HomePage extends StatefulWidget {
@@ -15,11 +16,13 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with RouteAware {
   late Future<List<Map<String, dynamic>>> _campaignsFuture;
+  late Future<List<Map<String, dynamic>>> _activityFuture;
 
   @override
   void initState() {
     super.initState();
     _campaignsFuture = _loadCampaigns();
+    _activityFuture = _loadActivity();
   }
 
   @override
@@ -34,12 +37,43 @@ class _HomePageState extends State<HomePage> with RouteAware {
     super.dispose();
   }
 
-  Future<List<Map<String, dynamic>>> _loadCampaigns() {
+  /// Charge les campagnes **et** leurs compteurs en une passe.
+  ///
+  /// Les compteurs arrivent d'une seule requête sur la vue
+  /// `campaign_overview` : une par campagne en aurait fait une dizaine pour
+  /// trois rooms.
+  Future<List<Map<String, dynamic>>> _loadCampaigns() async {
     final authProvider = context.read<AuthProvider>();
     final userId = authProvider.currentUser?.id;
-    return userId == null
-        ? Future.value(<Map<String, dynamic>>[])
-        : authProvider.getVisibleCampaigns(userId);
+    if (userId == null) return <Map<String, dynamic>>[];
+
+    final campaigns = await authProvider.getVisibleCampaigns(userId);
+    if (campaigns.isEmpty) return campaigns;
+
+    final overviews = await authProvider.getCampaignOverviews(
+      campaigns.map((campaign) => campaign['id'] as String).toList(),
+    );
+
+    return campaigns
+        .map((campaign) => {
+              ...campaign,
+              'overview': overviews[campaign['id']] ?? const <String, int>{},
+            })
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> _loadActivity() {
+    final authProvider = context.read<AuthProvider>();
+    if (authProvider.currentUser == null) {
+      return Future.value(<Map<String, dynamic>>[]);
+    }
+    return authProvider.getRecentActivity();
+  }
+
+  void _openRoom(String campaignId) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => RoomShell(roomId: campaignId)),
+    );
   }
 
   @override
@@ -49,6 +83,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
     // la liste peut avoir changé, il faut la recharger.
     setState(() {
       _campaignsFuture = _loadCampaigns();
+      _activityFuture = _loadActivity();
     });
   }
 
@@ -68,44 +103,57 @@ class _HomePageState extends State<HomePage> with RouteAware {
 
         final campaigns = snapshot.data ?? [];
         if (campaigns.isEmpty) {
-          // Aligné en haut : le parent `Expanded` donne toute la hauteur
-          // restante, sans quoi le message se retrouverait centré au milieu
-          // du vide.
-          return const Align(
-            alignment: Alignment.topLeft,
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                "Vous n'avez pas encore de room. Créez-en une ou rejoignez-en une avec un code.",
-                style: TextStyle(color: Colors.grey),
-              ),
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              "Vous n'avez pas encore de room. Créez-en une ou rejoignez-en une avec un code.",
+              style: TextStyle(color: Colors.grey),
             ),
           );
         }
 
-        // La liste occupe la hauteur que lui donne son parent `Expanded` et
-        // défile sur elle-même : les boutons d'action restent ancrés en bas
-        // de l'écran quel que soit le nombre de rooms.
+        // La liste ne défile pas d'elle-même : c'est la page entière qui
+        // défile, pour que les cartes et l'activité récente se suivent au lieu
+        // de se disputer la hauteur disponible.
         return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
           itemCount: campaigns.length,
           separatorBuilder: (context, index) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final campaign = campaigns[index];
+            final overview =
+                (campaign['overview'] as Map<String, int>?) ?? const {};
+
             return CampaignCard(
               title: campaign['title'] as String? ?? 'Sans titre',
+              description: campaign['description'] as String? ?? '',
               lastUpdate: formatLastUpdate(
                 (campaign['updated_at'] ?? campaign['created_at']) as String?,
               ),
               imageUrl: campaign['icon_url'] as String?,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => RoomShell(roomId: campaign['id'] as String),
-                  ),
-                );
-              },
+              memberCount: overview['members'],
+              imageCount: overview['images'],
+              noteCount: overview['notes'],
+              onTap: () => _openRoom(campaign['id'] as String),
             );
           },
+        );
+      },
+    );
+  }
+
+  Widget _buildActivity() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _activityFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const SizedBox.shrink();
+        }
+
+        return RecentActivitySection(
+          activity: snapshot.data ?? const [],
+          onOpenRoom: _openRoom,
         );
       },
     );
@@ -142,12 +190,11 @@ class _HomePageState extends State<HomePage> with RouteAware {
           ),
         ],
       ),
-      // Colonne plutôt que zone défilante : la liste des rooms absorbe la
-      // hauteur disponible et les deux boutons d'action restent ancrés en bas
-      // de l'écran. Sans cela, le retrait de la section « Derniers documents
-      // modifiés » (bogue B22) les laissait flotter au milieu du vide.
-      // `SafeArea` : sans elle, les boutons ancrés en bas passent sous la
-      // barre de navigation gestuelle du téléphone.
+      // Le contenu défile dans un `Expanded`, les deux boutons d'action
+      // restent ancrés en bas. Sans cet ancrage, le retrait de la section de
+      // démonstration (bogue B22) les laissait flotter au milieu du vide.
+      // `SafeArea` : sans elle, ils passent sous la barre de navigation
+      // gestuelle du téléphone.
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -162,7 +209,18 @@ class _HomePageState extends State<HomePage> with RouteAware {
                 ),
               ),
               const SizedBox(height: 16),
-              Expanded(child: _buildCampaigns()),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildCampaigns(),
+                      const SizedBox(height: 28),
+                      _buildActivity(),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 16),
               Row(
                 children: [

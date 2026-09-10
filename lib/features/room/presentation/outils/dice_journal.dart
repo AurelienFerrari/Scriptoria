@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/providers/room_provider.dart';
+import '../../../../core/utils/format_relative_age.dart';
 import '../../../../core/utils/friendly_error.dart';
 import '../../domain/dice.dart';
 
@@ -121,16 +122,6 @@ class _DiceJournalState extends State<DiceJournal> {
     return 'Utilisateur sans profil';
   }
 
-  /// Ancienneté en clair : à une table, « il y a 2 min » situe un jet bien
-  /// mieux qu'un horodatage complet.
-  String _ageOf(DateTime moment) {
-    final elapsed = DateTime.now().difference(moment);
-    if (elapsed.inMinutes < 1) return "à l'instant";
-    if (elapsed.inMinutes < 60) return 'il y a ${elapsed.inMinutes} min';
-    if (elapsed.inHours < 24) return 'il y a ${elapsed.inHours} h';
-    return 'il y a ${elapsed.inDays} j';
-  }
-
   @override
   Widget build(BuildContext context) {
     final room = context.watch<RoomProvider>();
@@ -220,7 +211,7 @@ class _DiceJournalState extends State<DiceJournal> {
           ],
         ),
         subtitle: Text(
-          '${roll.detail} · ${_ageOf(roll.rolledAt)}',
+          '${roll.detail} · ${formatRelativeAge(row['created_at'] as String?)}',
           style: const TextStyle(color: Colors.white54, fontSize: 13),
         ),
       ),

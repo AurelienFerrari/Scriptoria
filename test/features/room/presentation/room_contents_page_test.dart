@@ -43,6 +43,8 @@ void main() {
     service = MockSupabaseService();
     auth = AuthProvider(supabaseService: service);
     when(() => service.getCampaignImages(kRoomId)).thenAnswer((_) async => []);
+    // La vue MJ monte aussi la section des notes.
+    when(() => service.getRoomNotes(kRoomId)).thenAnswer((_) async => []);
   });
 
   Future<void> pumpAs(WidgetTester tester, String userId, String role) async {
