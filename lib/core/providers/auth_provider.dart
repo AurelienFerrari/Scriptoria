@@ -227,6 +227,54 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.deleteRoomNote(noteId);
   }
 
+  Future<List<Map<String, dynamic>>> getTimelineEvents(String campaignId) {
+    return _supabaseService.getTimelineEvents(campaignId);
+  }
+
+  Future<Map<String, dynamic>> createTimelineEvent({
+    required String campaignId,
+    required String authorId,
+    required String title,
+    String dateLabel = '',
+    String description = '',
+    int position = 0,
+    List<String>? visibleTo,
+  }) {
+    return _supabaseService.createTimelineEvent(
+      campaignId: campaignId,
+      authorId: authorId,
+      title: title,
+      dateLabel: dateLabel,
+      description: description,
+      position: position,
+      visibleTo: visibleTo,
+    );
+  }
+
+  Future<void> updateTimelineEvent({
+    required String eventId,
+    required String title,
+    required String dateLabel,
+    required String description,
+    required List<String>? visibleTo,
+  }) {
+    return _supabaseService.updateTimelineEvent(
+      eventId: eventId,
+      title: title,
+      dateLabel: dateLabel,
+      description: description,
+      visibleTo: visibleTo,
+    );
+  }
+
+  Future<void> updateTimelinePositions(Map<String, int> positionById) {
+    return _supabaseService.updateTimelinePositions(positionById);
+  }
+
+  Future<void> deleteTimelineEvent(String eventId) {
+    return _supabaseService.deleteTimelineEvent(eventId);
+  }
+
   Future<void> addDiceRoll({
     required String campaignId,
     required String userId,

@@ -21,7 +21,7 @@ void stubHomeScreen(MockSupabaseService service) {
 }
 
 /// Neutralise les requêtes que les écrans d'une room déclenchent à leur
-/// montage : fil, galerie, membres, notes, journal des jets.
+/// montage : fil, galerie, membres, notes, frise, journal des jets.
 ///
 /// Même logique que [stubHomeScreen] : un test qui traverse une room sans
 /// qu'elle soit son sujet — création, adhésion, navigation entre onglets —
@@ -32,6 +32,7 @@ void stubRoomScreens(MockSupabaseService service) {
   when(() => service.getCampaignImages(any())).thenAnswer((_) async => []);
   when(() => service.getCampaignMembers(any())).thenAnswer((_) async => []);
   when(() => service.getRoomNotes(any())).thenAnswer((_) async => []);
+  when(() => service.getTimelineEvents(any())).thenAnswer((_) async => []);
   when(() => service.getDiceRolls(any(), limit: any(named: 'limit')))
       .thenAnswer((_) async => []);
 }

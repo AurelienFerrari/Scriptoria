@@ -650,6 +650,87 @@ class SupabaseService {
     await _client.from('room_notes').delete().eq('id', noteId);
   }
 
+  // ============ FRISE CHRONOLOGIQUE ============
+
+  /// Évènements de la frise, dans l'ordre voulu par le MJ.
+  ///
+  /// Aucun filtre sur le rôle ni sur `visible_to` : la policy
+  /// `room_timeline_select_member` écarte déjà les évènements qu'un joueur n'a
+  /// pas à voir. Refaire le tri ici donnerait une seconde règle à maintenir,
+  /// et c'est toujours celle de la base qui ferait foi.
+  Future<List<Map<String, dynamic>>> getTimelineEvents(String campaignId) async {
+    try {
+      return await _client
+          .from('room_timeline_events')
+          .select()
+          .eq('campaign_id', campaignId)
+          .order('position', ascending: true);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> createTimelineEvent({
+    required String campaignId,
+    required String authorId,
+    required String title,
+    String dateLabel = '',
+    String description = '',
+    int position = 0,
+    List<String>? visibleTo,
+  }) async {
+    return await _client
+        .from('room_timeline_events')
+        .insert({
+          'campaign_id': campaignId,
+          'author_id': authorId,
+          'title': title,
+          'date_label': dateLabel,
+          'description': description,
+          'position': position,
+          'visible_to': visibleTo,
+        })
+        .select()
+        .single();
+  }
+
+  /// Réécrit tout ce que l'éditeur expose.
+  ///
+  /// `visible_to` est envoyé même à `null`, contrairement aux champs
+  /// optionnels d'`updateRoomNote` : ici `null` est une valeur qui veut dire
+  /// « tous les joueurs », pas une absence de changement. L'omettre rendrait
+  /// impossible de rouvrir un évènement à la table.
+  Future<void> updateTimelineEvent({
+    required String eventId,
+    required String title,
+    required String dateLabel,
+    required String description,
+    required List<String>? visibleTo,
+  }) async {
+    await _client.from('room_timeline_events').update({
+      'title': title,
+      'date_label': dateLabel,
+      'description': description,
+      'visible_to': visibleTo,
+    }).eq('id', eventId);
+  }
+
+  /// Applique un nouvel ordre à la frise.
+  ///
+  /// Seules les lignes dont la position change sont envoyées : réordonner deux
+  /// évènements voisins ne doit pas réécrire toute la frise.
+  Future<void> updateTimelinePositions(Map<String, int> positionById) async {
+    for (final entry in positionById.entries) {
+      await _client
+          .from('room_timeline_events')
+          .update({'position': entry.value}).eq('id', entry.key);
+    }
+  }
+
+  Future<void> deleteTimelineEvent(String eventId) async {
+    await _client.from('room_timeline_events').delete().eq('id', eventId);
+  }
+
   // ============ JOURNAL DES JETS DE DÉS ============
 
   /// Enregistre un jet dans le journal de la room.
