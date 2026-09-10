@@ -8,6 +8,7 @@ import '../../../core/utils/friendly_error.dart';
 import 'audience_dialog.dart';
 import 'feed/room_post_composer_page.dart';
 import 'room_route.dart';
+import 'zoomable_image_viewer.dart';
 
 const Color _bgColor = Color(0xFF161622);
 const Color _cardColor = Color(0xFF232336);
@@ -333,17 +334,29 @@ class _RoomHomePageState extends State<RoomHomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (imageUrl != null)
-            Image.network(
-              imageUrl,
-              width: double.infinity,
-              height: 200,
-              fit: BoxFit.cover,
-              excludeFromSemantics: true,
-              errorBuilder: (context, error, stack) => Container(
-                height: 200,
-                color: Colors.white10,
-                child: const Center(
-                  child: Icon(Icons.broken_image_outlined, color: Colors.white38),
+            Semantics(
+              button: true,
+              // `container: true` : sans lui, l'annotation se fond dans le
+              // nœud de la carte au lieu de former sa propre cible, et un
+              // lecteur d'écran n'annonce pas que l'image s'ouvre.
+              container: true,
+              label: 'Voir l\'image en grand',
+              child: GestureDetector(
+                onTap: () => showSingleImageViewer(context, imageUrl),
+                child: Image.network(
+                  imageUrl,
+                  width: double.infinity,
+                  height: 200,
+                  fit: BoxFit.cover,
+                  excludeFromSemantics: true,
+                  errorBuilder: (context, error, stack) => Container(
+                    height: 200,
+                    color: Colors.white10,
+                    child: const Center(
+                      child:
+                          Icon(Icons.broken_image_outlined, color: Colors.white38),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -352,17 +365,10 @@ class _RoomHomePageState extends State<RoomHomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (body != null && body.trim().isNotEmpty)
-                  Text(
-                    body,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      height: 1.45,
-                    ),
-                  ),
-                if (body != null && body.trim().isNotEmpty)
+                if (body != null && body.trim().isNotEmpty) ...[
+                  _ExpandableText(text: body),
                   const SizedBox(height: 12),
+                ],
                 Row(
                   children: [
                     Text(
@@ -436,6 +442,73 @@ class _RoomHomePageState extends State<RoomHomePage> {
           child: Text('Supprimer', style: TextStyle(color: Colors.red)),
         ),
       ],
+    );
+  }
+}
+
+/// Texte d'une publication, replié à une ligne par défaut.
+///
+/// Une publication de trente lignes ferait sinon une carte haute de trois
+/// écrans, et le fil deviendrait impossible à parcourir. Le repli laisse voir
+/// de quoi il s'agit ; qui veut lire déplie.
+class _ExpandableText extends StatefulWidget {
+  final String text;
+
+  const _ExpandableText({required this.text});
+
+  @override
+  State<_ExpandableText> createState() => _ExpandableTextState();
+}
+
+class _ExpandableTextState extends State<_ExpandableText> {
+  static const TextStyle _style = TextStyle(
+    color: Colors.white,
+    fontSize: 15,
+    height: 1.45,
+  );
+
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Le bouton n'apparaît que si le texte déborde réellement : une
+        // publication d'une ligne n'a pas à proposer « Voir plus ».
+        final painter = TextPainter(
+          text: TextSpan(text: widget.text, style: _style),
+          maxLines: 1,
+          textDirection: Directionality.of(context),
+        )..layout(maxWidth: constraints.maxWidth);
+        final overflows = painter.didExceedMaxLines;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.text,
+              style: _style,
+              maxLines: _expanded ? null : 1,
+              overflow: _expanded ? null : TextOverflow.ellipsis,
+            ),
+            if (overflows)
+              GestureDetector(
+                onTap: () => setState(() => _expanded = !_expanded),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    _expanded ? 'Voir moins' : 'Voir plus',
+                    style: const TextStyle(
+                      color: _primaryColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

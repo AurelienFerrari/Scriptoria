@@ -7,6 +7,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:scriptoria/core/providers/auth_provider.dart';
 import 'package:scriptoria/features/room/presentation/feed/room_post_composer_page.dart';
 import 'package:scriptoria/features/room/presentation/room_home_page.dart';
+import 'package:scriptoria/features/room/presentation/zoomable_image_viewer.dart';
 
 import '../../../helpers/mock_supabase_service.dart';
 import '../../../helpers/network_image_stub.dart';
@@ -106,6 +107,52 @@ void main() {
 
       final image = tester.widget<Image>(find.byType(Image));
       expect(image.image, isA<NetworkImage>());
+    });
+
+    testWidgets('replie un texte long derrière « Voir plus »', (tester) async {
+      final texteLong = List.filled(40, 'Le brouillard se lève.').join(' ');
+      when(() => service.getRoomPosts(kRoomId))
+          .thenAnswer((_) async => [_post(body: texteLong)]);
+
+      await pumpAs(tester, kPlayerId, 'player');
+
+      // Replié : une seule ligne. Sans cela, une publication de trente lignes
+      // ferait une carte haute de trois écrans et le fil deviendrait
+      // impossible à parcourir.
+      var texte = tester.widget<Text>(find.text(texteLong));
+      expect(texte.maxLines, 1);
+      expect(find.text('Voir plus'), findsOneWidget);
+
+      await tester.tap(find.text('Voir plus'));
+      await tester.pumpAndSettle();
+
+      texte = tester.widget<Text>(find.text(texteLong));
+      expect(texte.maxLines, isNull);
+      expect(find.text('Voir moins'), findsOneWidget);
+    });
+
+    testWidgets('ne propose pas « Voir plus » sur un texte court',
+        (tester) async {
+      when(() => service.getRoomPosts(kRoomId))
+          .thenAnswer((_) async => [_post(body: 'Court.')]);
+
+      await pumpAs(tester, kPlayerId, 'player');
+
+      expect(find.text('Voir plus'), findsNothing);
+    });
+
+    testWidgets('ouvre l\'image en grand au tap', (tester) async {
+      when(() => service.getRoomPosts(kRoomId)).thenAnswer((_) async => [
+            _post(body: null, imageUrl: 'https://exemple.test/scene.png'),
+          ]);
+
+      await pumpAs(tester, kPlayerId, 'player');
+
+      await tester.tap(find.bySemanticsLabel('Voir l\'image en grand'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ZoomableImageViewer), findsOneWidget);
+      expect(find.byTooltip('Fermer'), findsOneWidget);
     });
 
     testWidgets('annonce un fil vide différemment selon le rôle', (tester) async {
