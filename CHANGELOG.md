@@ -15,6 +15,8 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 - L'accueil d'une room devient son écran principal : un en-tête compact porte
   son identité, le fil occupe le reste. Il se limitait auparavant au nom et à
   la description
+- Paramètres du compte : changement de mot de passe et déconnexion. L'écran
+  n'affichait jusque-là que le texte « Page Paramètres » — bogue B27
 - Notes du maître du jeu, dans l'onglet « Contenus » : rédaction en Markdown,
   avec bascule entre saisie et aperçu rendu. Elles lui sont **strictement
   privées** — aucune policy n'ouvre leur lecture aux joueurs, qui ne voient
@@ -32,6 +34,12 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   reflètent donc ce que chacun a le droit de voir
 
 ### Corrigé
+- La page Profil affichait trois compteurs restés à zéro et trois onglets de
+  contenu entièrement inventé — campagnes, personnages et historique de
+  sessions qui n'ont jamais existé en base. Elle se limite désormais à
+  l'identité réelle et au nombre de rooms, et son bouton « Modifier le
+  profil », qui ne faisait que changer une icône, enregistre réellement —
+  bogue B26
 - La carte d'une room annonçait « MJ : » suivi d'une date de mise à jour,
   vestige d'un ancien contenu de démonstration
 

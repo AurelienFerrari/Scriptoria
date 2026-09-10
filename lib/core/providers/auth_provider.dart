@@ -61,6 +61,20 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.updatePassword(newPassword);
   }
 
+  Future<void> updateUserProfile({
+    required String userId,
+    String? displayName,
+    String? bio,
+    String? avatarUrl,
+  }) {
+    return _supabaseService.updateUserProfile(
+      userId: userId,
+      displayName: displayName,
+      bio: bio,
+      avatarUrl: avatarUrl,
+    );
+  }
+
   Future<Map<String, dynamic>> createCampaign({
     required String creatorId,
     required String title,
