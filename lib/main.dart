@@ -15,7 +15,6 @@ import 'features/home/presentation/pages/home_page.dart';
 import 'features/room/presentation/home/room_create_page.dart';
 import 'features/room/presentation/home/room_join_page.dart';
 import 'features/profile/presentation/pages/profile_page.dart';
-import 'features/settings/presentation/pages/settings_page.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/register_page.dart';
 import 'features/auth/presentation/pages/forgot_password_page.dart';
@@ -160,7 +159,6 @@ class _MyAppState extends State<MyApp> {
         '/CreationRoom': (context) => const RoomCreatePage(),
         '/JoinRoom': (context) => const RoomJoinPage(),
         '/profile': (context) => const ProfilePage(),
-        '/settings': (context) => const SettingsPage(),
       },
     );
   }

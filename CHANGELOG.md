@@ -15,8 +15,10 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 - L'accueil d'une room devient son écran principal : un en-tête compact porte
   son identité, le fil occupe le reste. Il se limitait auparavant au nom et à
   la description
-- Paramètres du compte : changement de mot de passe et déconnexion. L'écran
-  n'affichait jusque-là que le texte « Page Paramètres » — bogue B27
+- Actions de compte sur la page de profil : changement de mot de passe et
+  déconnexion. Elles vivaient dans un écran « Paramètres » qui n'affichait que
+  le texte « Page Paramètres » ; cet écran et sa route sont supprimés, le
+  compte tient sur un seul écran — bogue B27
 - Notes du maître du jeu, dans l'onglet « Contenus » : rédaction en Markdown,
   avec bascule entre saisie et aperçu rendu. Elles lui sont **strictement
   privées** — aucune policy n'ouvre leur lecture aux joueurs, qui ne voient

@@ -25,7 +25,6 @@ Widget _wrap(AuthProvider authProvider) {
       home: const ProfilePage(),
       routes: {
         '/login': (context) => const Scaffold(body: Text('LoginPageMarker')),
-        '/settings': (context) => const Scaffold(body: Text('SettingsMarker')),
       },
     ),
   );
@@ -177,17 +176,107 @@ void main() {
     expect(find.text('Je mène depuis 10 ans.'), findsOneWidget);
   });
 
-  testWidgets('ouvre les paramètres du compte', (WidgetTester tester) async {
-    when(() => mockSupabaseService.getCurrentUser()).thenReturn(_testUser);
-    when(() => mockSupabaseService.getUserProfile('user-1'))
-        .thenAnswer((_) async => null);
+  group('actions de compte', () {
+    setUp(() {
+      when(() => mockSupabaseService.getCurrentUser()).thenReturn(_testUser);
+      when(() => mockSupabaseService.getUserProfile('user-1'))
+          .thenAnswer((_) async => null);
+    });
 
-    await tester.pumpWidget(_wrap(authProvider));
-    await tester.pumpAndSettle();
+    testWidgets('sont sur cet écran, plus derrière un engrenage',
+        (tester) async {
+      await tester.pumpWidget(_wrap(authProvider));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Paramètres'));
-    await tester.pumpAndSettle();
+      expect(find.text('Changer le mot de passe'), findsOneWidget);
+      expect(find.text('Se déconnecter'), findsOneWidget);
+      expect(find.byTooltip('Paramètres'), findsNothing);
+    });
 
-    expect(find.text('SettingsMarker'), findsOneWidget);
+    testWidgets('changent le mot de passe', (tester) async {
+      when(() => mockSupabaseService.updatePassword(any())).thenAnswer(
+        (_) async => UserResponse.fromJson({'user': null}),
+      );
+
+      await tester.pumpWidget(_wrap(authProvider));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Changer le mot de passe'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'motdepasse123');
+      await tester.enterText(find.byType(TextField).last, 'motdepasse123');
+      await tester.tap(find.widgetWithText(TextButton, 'Enregistrer'));
+      await tester.pumpAndSettle();
+
+      verify(() => mockSupabaseService.updatePassword('motdepasse123')).called(1);
+      expect(find.text('Mot de passe modifié'), findsOneWidget);
+    });
+
+    testWidgets('refusent un mot de passe trop court', (tester) async {
+      await tester.pumpWidget(_wrap(authProvider));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Changer le mot de passe'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'court');
+      await tester.enterText(find.byType(TextField).last, 'court');
+      await tester.tap(find.widgetWithText(TextButton, 'Enregistrer'));
+      await tester.pumpAndSettle();
+
+      // Même règle qu'à l'inscription : un mot de passe accepté ici et refusé
+      // là serait incompréhensible.
+      expect(
+        find.text('Le mot de passe doit contenir au moins 8 caractères.'),
+        findsOneWidget,
+      );
+      verifyNever(() => mockSupabaseService.updatePassword(any()));
+    });
+
+    testWidgets('refusent deux saisies différentes', (tester) async {
+      await tester.pumpWidget(_wrap(authProvider));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Changer le mot de passe'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'motdepasse123');
+      await tester.enterText(find.byType(TextField).last, 'motdepasse456');
+      await tester.tap(find.widgetWithText(TextButton, 'Enregistrer'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Les mots de passe ne correspondent pas.'), findsOneWidget);
+      verifyNever(() => mockSupabaseService.updatePassword(any()));
+    });
+
+    testWidgets('déconnectent après confirmation', (tester) async {
+      when(() => mockSupabaseService.signOut()).thenAnswer((_) async {});
+
+      await tester.pumpWidget(_wrap(authProvider));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Se déconnecter'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Se déconnecter ?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Déconnexion'));
+      await tester.pumpAndSettle();
+
+      verify(() => mockSupabaseService.signOut()).called(1);
+      expect(find.text('LoginPageMarker'), findsOneWidget);
+    });
+
+    testWidgets('ne déconnectent pas si on annule', (tester) async {
+      await tester.pumpWidget(_wrap(authProvider));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Se déconnecter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Annuler'));
+      await tester.pumpAndSettle();
+
+      verifyNever(() => mockSupabaseService.signOut());
+    });
   });
 }
