@@ -6,6 +6,8 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.11.0] - 2026-09-11
+
 ### Ajouté
 - Frise chronologique de la room : le MJ y écrit l'histoire de la campagne, les
   joueurs la lisent. Chaque évènement porte un repère temporel en **texte
