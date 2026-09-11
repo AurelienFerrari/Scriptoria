@@ -6,6 +6,7 @@ import '../../../core/providers/room_provider.dart';
 import '../../../core/utils/format_relative_age.dart';
 import '../../../core/utils/friendly_error.dart';
 import 'audience_dialog.dart';
+import 'expandable_text.dart';
 import 'feed/room_post_composer_page.dart';
 import 'room_route.dart';
 import 'zoomable_image_viewer.dart';
@@ -197,7 +198,8 @@ class _RoomHomePageState extends State<RoomHomePage> {
                 if (posts.isEmpty) return _buildEmptyFeed(room.isMj);
 
                 return Column(
-                  children: posts.map((post) => _buildPost(post, room.isMj)).toList(),
+                  children:
+                      posts.map((post) => _buildPost(post, room.isMj)).toList(),
                 );
               },
             ),
@@ -267,7 +269,8 @@ class _RoomHomePageState extends State<RoomHomePage> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(Icons.update, color: Colors.white38, size: 14),
+                        const Icon(Icons.update,
+                            color: Colors.white38, size: 14),
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
@@ -290,7 +293,8 @@ class _RoomHomePageState extends State<RoomHomePage> {
             const SizedBox(height: 14),
             Text(
               widget.description,
-              style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+              style: const TextStyle(
+                  color: Colors.white70, fontSize: 14, height: 1.4),
             ),
           ],
         ],
@@ -353,8 +357,8 @@ class _RoomHomePageState extends State<RoomHomePage> {
                     height: 200,
                     color: Colors.white10,
                     child: const Center(
-                      child:
-                          Icon(Icons.broken_image_outlined, color: Colors.white38),
+                      child: Icon(Icons.broken_image_outlined,
+                          color: Colors.white38),
                     ),
                   ),
                 ),
@@ -366,14 +370,15 @@ class _RoomHomePageState extends State<RoomHomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (body != null && body.trim().isNotEmpty) ...[
-                  _ExpandableText(text: body),
+                  ExpandableText(text: body),
                   const SizedBox(height: 12),
                 ],
                 Row(
                   children: [
                     Text(
                       formatRelativeAge(post['created_at'] as String?),
-                      style: const TextStyle(color: Colors.white38, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 12),
                     ),
                     // Le badge de destinataires n'a de sens que pour le MJ :
                     // un joueur ne reçoit que ce qui lui est adressé, lui
@@ -411,7 +416,8 @@ class _RoomHomePageState extends State<RoomHomePage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.person_outline, size: 13, color: Color(0xFFE3C77B)),
+            const Icon(Icons.person_outline,
+                size: 13, color: Color(0xFFE3C77B)),
             const SizedBox(width: 4),
             Text(
               label,
@@ -442,73 +448,6 @@ class _RoomHomePageState extends State<RoomHomePage> {
           child: Text('Supprimer', style: TextStyle(color: Colors.red)),
         ),
       ],
-    );
-  }
-}
-
-/// Texte d'une publication, replié à une ligne par défaut.
-///
-/// Une publication de trente lignes ferait sinon une carte haute de trois
-/// écrans, et le fil deviendrait impossible à parcourir. Le repli laisse voir
-/// de quoi il s'agit ; qui veut lire déplie.
-class _ExpandableText extends StatefulWidget {
-  final String text;
-
-  const _ExpandableText({required this.text});
-
-  @override
-  State<_ExpandableText> createState() => _ExpandableTextState();
-}
-
-class _ExpandableTextState extends State<_ExpandableText> {
-  static const TextStyle _style = TextStyle(
-    color: Colors.white,
-    fontSize: 15,
-    height: 1.45,
-  );
-
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Le bouton n'apparaît que si le texte déborde réellement : une
-        // publication d'une ligne n'a pas à proposer « Voir plus ».
-        final painter = TextPainter(
-          text: TextSpan(text: widget.text, style: _style),
-          maxLines: 1,
-          textDirection: Directionality.of(context),
-        )..layout(maxWidth: constraints.maxWidth);
-        final overflows = painter.didExceedMaxLines;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.text,
-              style: _style,
-              maxLines: _expanded ? null : 1,
-              overflow: _expanded ? null : TextOverflow.ellipsis,
-            ),
-            if (overflows)
-              GestureDetector(
-                onTap: () => setState(() => _expanded = !_expanded),
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    _expanded ? 'Voir moins' : 'Voir plus',
-                    style: const TextStyle(
-                      color: _primaryColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
     );
   }
 }

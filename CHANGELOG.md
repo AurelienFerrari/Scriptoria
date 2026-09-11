@@ -6,6 +6,18 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté
+- Frise chronologique de la room : le MJ y écrit l'histoire de la campagne, les
+  joueurs la lisent. Chaque évènement porte un repère temporel en **texte
+  libre** — « an 1247, au printemps », « trois lunes plus tard » — plutôt
+  qu'une date : contraindre une campagne au calendrier grégorien obligerait le
+  MJ à inventer des dates réelles pour un monde qui n'en a pas. L'ordre est
+  donc porté par une colonne à part, que le MJ règle évènement par évènement
+- Un évènement de la frise a ses propres destinataires, comme une image ou une
+  publication : toute la table, une sélection de joueurs, ou vous seul tant
+  qu'il n'est pas révélé. Le filtrage est appliqué par la RLS, pas par
+  l'interface — un joueur qui interrogerait l'API ne verrait pas davantage
+
 ## [0.10.0] - 2026-09-10
 
 ### Ajouté
