@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -16,6 +17,7 @@ const Color _cardColor = Color(0xFF232336);
 const Color _primaryColor = Color(0xFF6FE3E1);
 const Color _mineColor = Color(0xFF1E3A40);
 const Color _whisperColor = Color(0xFFE3C77B);
+const Color _quoteColor = Color(0x33000000);
 
 /// Longueur maximale d'un message, alignée sur la contrainte
 /// `room_messages_body_length` de la base.
@@ -50,6 +52,9 @@ class _RoomChatPageState extends State<RoomChatPage> {
   /// Le choix reste en place d'un message à l'autre : un échange secret tient
   /// rarement en une ligne. Le bandeau au-dessus de la saisie le rappelle.
   List<String>? _whisperTo;
+
+  /// Message auquel le prochain répond, choisi en le faisant glisser.
+  Map<String, dynamic>? _replyTo;
 
   bool _isLoading = true;
   bool _isSending = false;
@@ -121,7 +126,18 @@ class _RoomChatPageState extends State<RoomChatPage> {
     if (!_messages.any((m) => m['id'] == id)) return;
     setState(() {
       _messages = _messages.where((m) => m['id'] != id).toList();
+      // On ne répond pas à un message qui n'existe plus.
+      if (_replyTo?['id'] == id) _replyTo = null;
     });
+  }
+
+  /// Le message [id], s'il fait partie de ce que cet écran a le droit de lire.
+  Map<String, dynamic>? _messageById(Object? id) {
+    if (id == null) return null;
+    for (final message in _messages) {
+      if (message['id'] == id) return message;
+    }
+    return null;
   }
 
   String _nameOf(String? userId) {
@@ -139,6 +155,10 @@ class _RoomChatPageState extends State<RoomChatPage> {
 
   String _namesOf(List<String> ids) => ids.map(_nameOf).join(', ');
 
+  void _startReply(Map<String, dynamic> message) {
+    setState(() => _replyTo = message);
+  }
+
   Future<void> _send() async {
     final body = _controller.text.trim();
     if (body.isEmpty || _isSending) return;
@@ -155,12 +175,14 @@ class _RoomChatPageState extends State<RoomChatPage> {
         authorId: authorId,
         body: body,
         visibleTo: _whisperTo,
+        replyTo: _replyTo?['id'] as String?,
       );
       if (!mounted) return;
       _controller.clear();
+      setState(() => _replyTo = null);
       _append(message);
     } catch (e) {
-      // Le texte reste dans la saisie : un échec ne doit rien faire perdre.
+      // Le texte et la citation restent : un échec ne doit rien faire perdre.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(friendlyErrorMessage(e))),
@@ -252,6 +274,7 @@ class _RoomChatPageState extends State<RoomChatPage> {
       body: Column(
         children: [
           Expanded(child: _buildMessages(room.isMj, currentUserId)),
+          if (_replyTo != null) _buildReplyBanner(currentUserId),
           if (_whisperTo != null) _buildWhisperBanner(),
           _buildComposer(room.isMj),
         ],
@@ -294,10 +317,16 @@ class _RoomChatPageState extends State<RoomChatPage> {
     bool isMj,
     String? currentUserId,
   ) {
+    final id = message['id'] as String?;
     final authorId = message['author_id'] as String?;
     final isMine = authorId == currentUserId;
     final visibleTo = (message['visible_to'] as List?)?.cast<String>();
     final body = message['body'] as String? ?? '';
+
+    // La citation n'est affichée que si cet écran peut lire l'original : un
+    // chuchotement cité n'apparaît qu'à ceux qui l'ont reçu. Seul son id est
+    // enregistré, jamais son texte.
+    final quoted = _messageById(message['reply_to']);
 
     String? whisperLabel;
     if (visibleTo != null) {
@@ -343,6 +372,8 @@ class _RoomChatPageState extends State<RoomChatPage> {
                 ),
               ],
             ),
+          if (quoted != null)
+            _buildQuote(quoted, currentUserId, key: ValueKey('quote-$id')),
           Text(body, style: const TextStyle(color: Colors.white, height: 1.35)),
           const SizedBox(height: 2),
           Text(
@@ -357,17 +388,139 @@ class _RoomChatPageState extends State<RoomChatPage> {
     // règle que la policy `room_messages_delete_author_or_mj`.
     final canDelete = isMine || isMj;
 
-    return Align(
-      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: canDelete
-          ? Semantics(
-              onLongPressHint: 'supprimer le message',
-              child: GestureDetector(
-                onLongPress: () => _confirmAndDelete(message),
-                child: bubble,
-              ),
-            )
-          : bubble,
+    return Dismissible(
+      key: ValueKey('message-$id'),
+      direction: DismissDirection.startToEnd,
+      dismissThresholds: const {DismissDirection.startToEnd: 0.2},
+      // Le message ne part pas : le glisser le cite dans la réponse, puis il
+      // revient à sa place.
+      confirmDismiss: (_) async {
+        _startReply(message);
+        return false;
+      },
+      background: const Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: EdgeInsets.only(left: 8),
+          child: Icon(Icons.reply, color: _primaryColor),
+        ),
+      ),
+      child: Semantics(
+        // Un lecteur d'écran ne sait pas faire glisser : il trouve la réponse
+        // parmi les actions du message.
+        customSemanticsActions: {
+          const CustomSemanticsAction(label: 'Répondre'): () =>
+              _startReply(message),
+        },
+        onLongPressHint: canDelete ? 'supprimer le message' : null,
+        child: Align(
+          alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+          child: canDelete
+              ? GestureDetector(
+                  onLongPress: () => _confirmAndDelete(message),
+                  child: bubble,
+                )
+              : bubble,
+        ),
+      ),
+    );
+  }
+
+  /// Le message cité, en tête de la réponse.
+  ///
+  /// Barre à gauche sans coins arrondis : Flutter refuse une bordure d'un seul
+  /// côté combinée à un `borderRadius`.
+  Widget _buildQuote(
+    Map<String, dynamic> quoted,
+    String? currentUserId, {
+    Key? key,
+  }) {
+    final isMine = quoted['author_id'] == currentUserId;
+
+    return Container(
+      key: key,
+      margin: const EdgeInsets.only(top: 2, bottom: 6),
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+      decoration: const BoxDecoration(
+        color: _quoteColor,
+        border: Border(left: BorderSide(color: _primaryColor, width: 3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isMine ? 'Vous' : _nameOf(quoted['author_id'] as String?),
+            style: const TextStyle(
+              color: _primaryColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            quoted['body'] as String? ?? '',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white60, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReplyBanner(String? currentUserId) {
+    final target = _replyTo!;
+    final isMine = target['author_id'] == currentUserId;
+    // Répondre à toute la table à un chuchotement le fait sortir de son
+    // cercle : l'utilisateur doit le savoir avant d'envoyer.
+    final revealsWhisper = target['visible_to'] != null && _whisperTo == null;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.fromLTRB(12, 6, 0, 6),
+      decoration: const BoxDecoration(
+        color: _cardColor,
+        border: Border(left: BorderSide(color: _primaryColor, width: 3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.reply, size: 18, color: _primaryColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isMine
+                      ? 'Réponse à votre message'
+                      : 'Réponse à ${_nameOf(target['author_id'] as String?)}',
+                  style: const TextStyle(
+                    color: _primaryColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  target['body'] as String? ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+                if (revealsWhisper)
+                  const Text(
+                    'Votre réponse sera lue par toute la table.',
+                    style: TextStyle(color: _whisperColor, fontSize: 12),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18, color: Colors.white54),
+            tooltip: 'Annuler la réponse',
+            onPressed: () => setState(() => _replyTo = null),
+          ),
+        ],
+      ),
     );
   }
 
