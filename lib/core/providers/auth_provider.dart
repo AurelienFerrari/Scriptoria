@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_service.dart';
+import '../services/row_change.dart';
 
 /// Expose l'état d'authentification à toute l'app et notifie les widgets qui
 /// l'écoutent (via Provider) à chaque connexion/déconnexion, au lieu que
@@ -109,20 +110,26 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.getVisibleCampaigns(userId);
   }
 
-  Future<void> joinCampaign({required String campaignId, required String userId}) {
-    return _supabaseService.joinCampaign(campaignId: campaignId, userId: userId);
+  Future<void> joinCampaign(
+      {required String campaignId, required String userId}) {
+    return _supabaseService.joinCampaign(
+        campaignId: campaignId, userId: userId);
   }
 
-  Future<String?> getMemberRole({required String campaignId, required String userId}) {
-    return _supabaseService.getMemberRole(campaignId: campaignId, userId: userId);
+  Future<String?> getMemberRole(
+      {required String campaignId, required String userId}) {
+    return _supabaseService.getMemberRole(
+        campaignId: campaignId, userId: userId);
   }
 
   Future<List<Map<String, dynamic>>> getCampaignMembers(String campaignId) {
     return _supabaseService.getCampaignMembers(campaignId);
   }
 
-  Future<void> removeCampaignMember({required String campaignId, required String userId}) {
-    return _supabaseService.removeCampaignMember(campaignId: campaignId, userId: userId);
+  Future<void> removeCampaignMember(
+      {required String campaignId, required String userId}) {
+    return _supabaseService.removeCampaignMember(
+        campaignId: campaignId, userId: userId);
   }
 
   Future<Map<String, dynamic>?> updateCampaign({
@@ -185,7 +192,8 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.deleteRoomPost(post);
   }
 
-  Future<Map<String, Map<String, int>>> getCampaignOverviews(List<String> campaignIds) {
+  Future<Map<String, Map<String, int>>> getCampaignOverviews(
+      List<String> campaignIds) {
     return _supabaseService.getCampaignOverviews(campaignIds);
   }
 
@@ -275,6 +283,34 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.deleteTimelineEvent(eventId);
   }
 
+  Future<List<Map<String, dynamic>>> getRoomMessages(String campaignId) {
+    return _supabaseService.getRoomMessages(campaignId);
+  }
+
+  Future<Map<String, dynamic>> createRoomMessage({
+    required String campaignId,
+    required String authorId,
+    required String body,
+    List<String>? visibleTo,
+  }) {
+    return _supabaseService.createRoomMessage(
+      campaignId: campaignId,
+      authorId: authorId,
+      body: body,
+      visibleTo: visibleTo,
+    );
+  }
+
+  Future<void> deleteRoomMessage(String messageId) {
+    return _supabaseService.deleteRoomMessage(messageId);
+  }
+
+  /// Changements en temps réel sur une table de la room : voir
+  /// [SupabaseService.watchRoomTable].
+  Stream<RowChange> watchRoomTable(String table, String campaignId) {
+    return _supabaseService.watchRoomTable(table, campaignId);
+  }
+
   Future<void> addDiceRoll({
     required String campaignId,
     required String userId,
@@ -295,7 +331,8 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
-  Future<List<Map<String, dynamic>>> getDiceRolls(String campaignId, {int limit = 50}) {
+  Future<List<Map<String, dynamic>>> getDiceRolls(String campaignId,
+      {int limit = 50}) {
     return _supabaseService.getDiceRolls(campaignId, limit: limit);
   }
 
@@ -334,6 +371,7 @@ class AuthProvider extends ChangeNotifier {
     required String bucket,
     required String fileName,
   }) {
-    return _supabaseService.uploadImage(file: file, bucket: bucket, fileName: fileName);
+    return _supabaseService.uploadImage(
+        file: file, bucket: bucket, fileName: fileName);
   }
 }

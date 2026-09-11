@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:scriptoria/core/providers/auth_provider.dart';
+import 'package:scriptoria/core/services/row_change.dart';
 import 'package:scriptoria/features/room/domain/dice.dart';
 import 'package:scriptoria/features/room/presentation/outils/de_page.dart';
 
@@ -37,6 +39,9 @@ void main() {
     auth = AuthProvider(supabaseService: service);
     when(() => service.getDiceRolls(any(), limit: any(named: 'limit')))
         .thenAnswer((_) async => []);
+    // Le journal s'abonne au temps réel ; sauf mention contraire, rien n'arrive.
+    when(() => service.watchRoomTable(any(), any()))
+        .thenAnswer((_) => const Stream.empty());
     when(() => service.addDiceRoll(
           campaignId: any(named: 'campaignId'),
           userId: any(named: 'userId'),
@@ -71,7 +76,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('DePage propose les dés usuels et un d20 par défaut', (tester) async {
+  testWidgets('DePage propose les dés usuels et un d20 par défaut',
+      (tester) async {
     await pump(tester);
 
     expect(find.text('Dé'), findsOneWidget);
@@ -82,7 +88,8 @@ void main() {
     expect(find.text('Aucun jet pour l\'instant'), findsOneWidget);
   });
 
-  testWidgets('DePage affiche le total et le détail après un lancer', (tester) async {
+  testWidgets('DePage affiche le total et le détail après un lancer',
+      (tester) async {
     await pump(tester, face: 12);
 
     await tester.tap(find.text('Lancer 1d20'));
@@ -127,7 +134,8 @@ void main() {
     expect(find.text('6'), findsWidgets);
   });
 
-  testWidgets('DePage signale une réussite critique sur un d20 seul', (tester) async {
+  testWidgets('DePage signale une réussite critique sur un d20 seul',
+      (tester) async {
     await pump(tester, face: 20);
 
     await tester.tap(find.text('Lancer 1d20'));
@@ -136,7 +144,8 @@ void main() {
     expect(find.text('Réussite critique'), findsOneWidget);
   });
 
-  testWidgets('DePage signale un échec critique sur un d20 seul', (tester) async {
+  testWidgets('DePage signale un échec critique sur un d20 seul',
+      (tester) async {
     await pump(tester, face: 1);
 
     await tester.tap(find.text('Lancer 1d20'));
@@ -175,7 +184,8 @@ void main() {
           )).called(1);
     });
 
-    testWidgets('l\'échec d\'enregistrement ne fait pas disparaître le résultat',
+    testWidgets(
+        'l\'échec d\'enregistrement ne fait pas disparaître le résultat',
         (tester) async {
       when(() => service.addDiceRoll(
             campaignId: any(named: 'campaignId'),
@@ -198,7 +208,8 @@ void main() {
       expect(find.textContaining('Jet non enregistré'), findsOneWidget);
     });
 
-    testWidgets('affiche les jets de la table avec leur auteur', (tester) async {
+    testWidgets('affiche les jets de la table avec leur auteur',
+        (tester) async {
       when(() => service.getDiceRolls(kRoomId, limit: any(named: 'limit')))
           .thenAnswer((_) async => [
                 {
@@ -340,6 +351,72 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Vider le journal'), findsNothing);
+    });
+  });
+  group("journal en temps réel", () {
+    late StreamController<RowChange> changes;
+
+    setUp(() {
+      changes = StreamController<RowChange>();
+      when(() => service.watchRoomTable("dice_rolls", kRoomId))
+          .thenAnswer((_) => changes.stream);
+    });
+
+    tearDown(() => changes.close());
+
+    Map<String, dynamic> rollBy(String id) => {
+          "id": id,
+          "campaign_id": kRoomId,
+          "user_id": kMjId,
+          "display_name": "Aurélien",
+          "username": "aurelien",
+          "sides": 20,
+          "dice_count": 1,
+          "modifier": 0,
+          "results": [14],
+          "is_secret": false,
+          "created_at": "2026-09-11T10:00:00Z",
+        };
+
+    testWidgets("un jet d'un autre joueur apparaît sans rafraîchir",
+        (tester) async {
+      var rolls = <Map<String, dynamic>>[];
+      when(() => service.getDiceRolls(kRoomId, limit: any(named: "limit")))
+          .thenAnswer((_) async => rolls);
+
+      await pump(tester);
+      await tester.tap(find.text("Journal"));
+      await tester.pumpAndSettle();
+      expect(find.textContaining("Aurélien"), findsNothing);
+
+      rolls = [rollBy("roll-9")];
+      changes.add(const RowChange(RowChangeKind.inserted, {"id": "roll-9"}));
+      // Le rechargement attend que la rafale soit passée.
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining("Aurélien"), findsOneWidget);
+    });
+
+    testWidgets("une rafale de suppressions ne recharge le journal qu'une fois",
+        (tester) async {
+      when(() => service.getDiceRolls(kRoomId, limit: any(named: "limit")))
+          .thenAnswer((_) async => [rollBy("roll-1")]);
+
+      await pump(tester);
+      await tester.tap(find.text("Journal"));
+      await tester.pumpAndSettle();
+      clearInteractions(service);
+
+      // Vider le journal supprime jusqu'à cinquante jets d'un coup.
+      for (var i = 0; i < 50; i++) {
+        changes.add(RowChange(RowChangeKind.deleted, {"id": "roll-$i"}));
+      }
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+
+      verify(() => service.getDiceRolls(kRoomId, limit: any(named: "limit")))
+          .called(1);
     });
   });
 }

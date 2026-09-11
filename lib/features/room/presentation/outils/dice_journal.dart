@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/providers/room_provider.dart';
+import '../../../../core/services/row_change.dart';
 import '../../../../core/utils/format_relative_age.dart';
 import '../../../../core/utils/friendly_error.dart';
 import '../../domain/dice.dart';
@@ -26,17 +29,41 @@ class DiceJournal extends StatefulWidget {
 class _DiceJournalState extends State<DiceJournal> {
   late Future<List<Map<String, dynamic>>> _rollsFuture;
 
+  /// Abonnement au temps réel : un jet fait par un autre joueur apparaît sans
+  /// qu'on ait à tirer l'écran.
+  StreamSubscription<RowChange>? _changes;
+  Timer? _reloadSoon;
+
   @override
   void initState() {
     super.initState();
     _rollsFuture = _loadRolls();
     widget.revision.addListener(_reload);
+
+    final room = context.read<RoomProvider>();
+    _changes = context
+        .read<AuthProvider>()
+        .watchRoomTable('dice_rolls', room.roomId)
+        .listen((_) => _scheduleReload());
   }
 
   @override
   void dispose() {
     widget.revision.removeListener(_reload);
+    _changes?.cancel();
+    _reloadSoon?.cancel();
     super.dispose();
+  }
+
+  /// Recharge le journal peu après un changement reçu en temps réel.
+  ///
+  /// Recharger plutôt qu'insérer la ligne reçue : elle ne porte pas le nom de
+  /// son auteur, et le journal est court. Le délai regroupe les rafales —
+  /// vider le journal supprime jusqu'à cinquante jets d'un coup, soit autant
+  /// d'événements, qui ne déclenchent ainsi qu'un seul rechargement.
+  void _scheduleReload() {
+    _reloadSoon?.cancel();
+    _reloadSoon = Timer(const Duration(milliseconds: 300), _reload);
   }
 
   Future<List<Map<String, dynamic>>> _loadRolls() {
@@ -114,7 +141,8 @@ class _DiceJournalState extends State<DiceJournal> {
     if (row['user_id'] == currentUserId) return 'Vous';
 
     final displayName = row['display_name'] as String?;
-    if (displayName != null && displayName.trim().isNotEmpty) return displayName;
+    if (displayName != null && displayName.trim().isNotEmpty)
+      return displayName;
 
     final username = row['username'] as String?;
     if (username != null && username.trim().isNotEmpty) return username;
@@ -206,7 +234,8 @@ class _DiceJournalState extends State<DiceJournal> {
             ),
             if (isSecret) ...[
               const SizedBox(width: 8),
-              const Icon(Icons.lock_outline, size: 16, color: Color(0xFFE3C77B)),
+              const Icon(Icons.lock_outline,
+                  size: 16, color: Color(0xFFE3C77B)),
             ],
           ],
         ),

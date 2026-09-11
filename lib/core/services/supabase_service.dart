@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:scriptoria/config/supabase_credentials.dart';
+import 'row_change.dart';
 
 class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
@@ -29,7 +31,8 @@ class SupabaseService {
       supabaseUrl = Platform.environment['SUPABASE_URL'];
       supabaseAnonKey = Platform.environment['SUPABASE_ANON_KEY'];
       if (supabaseUrl != null && supabaseAnonKey != null) {
-        print('✓ Variables chargées depuis les variables d\'environnement système');
+        print(
+            '✓ Variables chargées depuis les variables d\'environnement système');
       }
     }
 
@@ -95,9 +98,10 @@ class SupabaseService {
     try {
       // Nettoyer l'email: trim et convertir en minuscules
       final cleanEmail = email.trim().toLowerCase();
-      print('[SUPABASE] Email envoyé: "$cleanEmail" (length: ${cleanEmail.length})');
+      print(
+          '[SUPABASE] Email envoyé: "$cleanEmail" (length: ${cleanEmail.length})');
       print('[SUPABASE] Email original: "$email"');
-      
+
       final response = await _client.auth.signUp(
         email: cleanEmail,
         password: password,
@@ -176,12 +180,14 @@ class SupabaseService {
   /// Doit être enregistrée comme schéma custom côté natif (voir
   /// AndroidManifest.xml / Info.plist) et ajoutée à l'allow-list "Redirect
   /// URLs" du projet Supabase (Authentication > URL Configuration).
-  static const String authCallbackUrl = 'com.example.scriptoria://reset-callback/';
+  static const String authCallbackUrl =
+      'com.example.scriptoria://reset-callback/';
 
   /// Réinitialiser le mot de passe
   Future<void> resetPassword(String email) async {
     try {
-      await _client.auth.resetPasswordForEmail(email, redirectTo: authCallbackUrl);
+      await _client.auth
+          .resetPasswordForEmail(email, redirectTo: authCallbackUrl);
     } catch (e) {
       rethrow;
     }
@@ -235,22 +241,23 @@ class SupabaseService {
         print('[SUPABASE] Utilisateur non connecté ou email non disponible');
         return null;
       }
-      
-      print('[SUPABASE] Récupération du profil pour email: ${currentUser.email}');
-      
+
+      print(
+          '[SUPABASE] Récupération du profil pour email: ${currentUser.email}');
+
       // Chercher le profil par email (email est la clé primaire)
       final response = await _client
           .from('users')
           .select()
           .eq('email', currentUser.email!)
           .maybeSingle();
-      
+
       if (response != null) {
         print('[SUPABASE] Profil trouvé pour ${currentUser.email}');
       } else {
         print('[SUPABASE] Aucun profil trouvé pour ${currentUser.email}');
       }
-      
+
       return response;
     } catch (e) {
       print('[SUPABASE] Erreur lors de la récupération du profil: $e');
@@ -284,10 +291,8 @@ class SupabaseService {
   /// Vérifier si un username est disponible
   Future<bool> isUsernameAvailable(String username) async {
     try {
-      final response = await _client
-          .from('users')
-          .select()
-          .eq('username', username);
+      final response =
+          await _client.from('users').select().eq('username', username);
       return response.isEmpty;
     } catch (e) {
       return false;
@@ -378,12 +383,12 @@ class SupabaseService {
   }) async {
     await _client
         .from('images')
-        .update({'visible_to': visibleTo})
-        .eq('id', imageId);
+        .update({'visible_to': visibleTo}).eq('id', imageId);
   }
 
   /// Images publiées dans une room, de la plus récente à la plus ancienne.
-  Future<List<Map<String, dynamic>>> getCampaignImages(String campaignId) async {
+  Future<List<Map<String, dynamic>>> getCampaignImages(
+      String campaignId) async {
     try {
       return await _client
           .from('images')
@@ -498,7 +503,8 @@ class SupabaseService {
       ];
 
       activity.sort(
-        (a, b) => (b['at'] as String? ?? '').compareTo(a['at'] as String? ?? ''),
+        (a, b) =>
+            (b['at'] as String? ?? '').compareTo(a['at'] as String? ?? ''),
       );
 
       return activity.take(limit).toList();
@@ -658,7 +664,8 @@ class SupabaseService {
   /// `room_timeline_select_member` écarte déjà les évènements qu'un joueur n'a
   /// pas à voir. Refaire le tri ici donnerait une seconde règle à maintenir,
   /// et c'est toujours celle de la base qui ferait foi.
-  Future<List<Map<String, dynamic>>> getTimelineEvents(String campaignId) async {
+  Future<List<Map<String, dynamic>>> getTimelineEvents(
+      String campaignId) async {
     try {
       return await _client
           .from('room_timeline_events')
@@ -729,6 +736,131 @@ class SupabaseService {
 
   Future<void> deleteTimelineEvent(String eventId) async {
     await _client.from('room_timeline_events').delete().eq('id', eventId);
+  }
+
+  // ============ CHAT DE LA ROOM ============
+
+  /// Nombre de messages chargés à l'ouverture du chat.
+  static const int chatHistoryLimit = 100;
+
+  /// Derniers messages de la room, du plus ancien au plus récent.
+  ///
+  /// Aucun filtre sur les chuchotements ici : la policy
+  /// `room_messages_select_audience` ne renvoie à chacun que ce qu'il a le
+  /// droit de lire.
+  Future<List<Map<String, dynamic>>> getRoomMessages(String campaignId) async {
+    try {
+      final rows = await _client
+          .from('room_messages')
+          .select()
+          .eq('campaign_id', campaignId)
+          .order('created_at', ascending: false)
+          .limit(chatHistoryLimit);
+      // Demandés du plus récent au plus ancien, pour que la limite garde les
+      // derniers ; remis ensuite dans l'ordre de lecture.
+      return rows.reversed.toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> createRoomMessage({
+    required String campaignId,
+    required String authorId,
+    required String body,
+    List<String>? visibleTo,
+  }) async {
+    return await _client
+        .from('room_messages')
+        .insert({
+          'campaign_id': campaignId,
+          'author_id': authorId,
+          'body': body,
+          'visible_to': visibleTo,
+        })
+        .select()
+        .single();
+  }
+
+  /// Supprime un message.
+  ///
+  /// La RLS ne lève pas d'erreur quand elle refuse une suppression : elle ne
+  /// supprime simplement rien. Les lignes effacées sont donc relues, pour
+  /// qu'un refus remonte comme un échec plutôt que comme un faux succès.
+  Future<void> deleteRoomMessage(String messageId) async {
+    final deleted = await _client
+        .from('room_messages')
+        .delete()
+        .eq('id', messageId)
+        .select('id');
+    if (deleted.isEmpty) {
+      throw StateError('Message introuvable, ou suppression refusée.');
+    }
+  }
+
+  // ============ TEMPS RÉEL ============
+
+  /// Insertions et suppressions sur [table] pour la room [campaignId], en
+  /// temps réel.
+  ///
+  /// Le canal ne s'ouvre qu'à la première écoute et se referme quand elle
+  /// s'arrête : un écran qui disparaît ne laisse pas d'abonnement ouvert.
+  ///
+  /// Les insertions sont filtrées sur la room, et la RLS s'y applique : chacun
+  /// ne reçoit que les lignes qu'il a le droit de lire. Les suppressions, elles,
+  /// ne peuvent pas être filtrées : l'événement ne porte que l'`id` de la ligne
+  /// (voir la migration `room_messages_realtime`). Un écran reçoit donc aussi
+  /// celles des autres rooms, et ignore les `id` qu'il ne connaît pas.
+  Stream<RowChange> watchRoomTable(String table, String campaignId) {
+    RealtimeChannel? channel;
+    late final StreamController<RowChange> controller;
+
+    void emit(RowChange change) {
+      if (!controller.isClosed) controller.add(change);
+    }
+
+    controller = StreamController<RowChange>(
+      onListen: () {
+        // Un nom unique par abonnement : deux écrans ouverts sur la même room
+        // ne se disputent pas le même canal.
+        final topic =
+            '$table:$campaignId:${DateTime.now().microsecondsSinceEpoch}';
+        channel = _client
+            .channel(topic)
+            .onPostgresChanges(
+              event: PostgresChangeEvent.insert,
+              schema: 'public',
+              table: table,
+              filter: PostgresChangeFilter(
+                type: PostgresChangeFilterType.eq,
+                column: 'campaign_id',
+                value: campaignId,
+              ),
+              callback: (payload) =>
+                  emit(RowChange(RowChangeKind.inserted, payload.newRecord)),
+            )
+            .onPostgresChanges(
+              event: PostgresChangeEvent.delete,
+              schema: 'public',
+              table: table,
+              callback: (payload) =>
+                  emit(RowChange(RowChangeKind.deleted, payload.oldRecord)),
+            )
+            .subscribe((status, error) {
+          if (status == RealtimeSubscribeStatus.subscribed) {
+            emit(const RowChange(RowChangeKind.resubscribed));
+          }
+        });
+      },
+      onCancel: () async {
+        final open = channel;
+        channel = null;
+        if (open != null) await _client.removeChannel(open);
+        await controller.close();
+      },
+    );
+
+    return controller.stream;
   }
 
   // ============ JOURNAL DES JETS DE DÉS ============
@@ -831,10 +963,8 @@ class SupabaseService {
   /// `campaign_members`, alimentée par [joinCampaign]).
   Future<List<Map<String, dynamic>>> getVisibleCampaigns(String userId) async {
     try {
-      final owned = await _client
-          .from('campaigns')
-          .select()
-          .eq('creator_id', userId);
+      final owned =
+          await _client.from('campaigns').select().eq('creator_id', userId);
 
       final joinedRows = await _client
           .from('campaign_members')
@@ -850,7 +980,8 @@ class SupabaseService {
       }
 
       final result = byId.values.toList()
-        ..sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
+        ..sort((a, b) =>
+            (b['created_at'] as String).compareTo(a['created_at'] as String));
       return result;
     } catch (e) {
       return [];
@@ -904,7 +1035,8 @@ class SupabaseService {
   /// Le profil peut manquer si l'insertion dans `users` a échoué à
   /// l'inscription : les champs sont alors `null`, à l'appelant de prévoir
   /// un libellé de repli.
-  Future<List<Map<String, dynamic>>> getCampaignMembers(String campaignId) async {
+  Future<List<Map<String, dynamic>>> getCampaignMembers(
+      String campaignId) async {
     try {
       final memberships = await _client
           .from('campaign_members')
@@ -1006,11 +1138,8 @@ class SupabaseService {
   /// Récupère une campagne (room) par son id
   Future<Map<String, dynamic>?> getCampaignById(String id) async {
     try {
-      final response = await _client
-          .from('campaigns')
-          .select()
-          .eq('id', id)
-          .maybeSingle();
+      final response =
+          await _client.from('campaigns').select().eq('id', id).maybeSingle();
       return response;
     } catch (e) {
       return null;
