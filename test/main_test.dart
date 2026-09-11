@@ -10,6 +10,7 @@ import 'package:scriptoria/features/auth/presentation/pages/register_page.dart';
 import 'package:scriptoria/features/home/presentation/pages/home_page.dart';
 import 'package:scriptoria/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:scriptoria/main.dart';
+import 'package:scriptoria/ui/app_frame.dart';
 
 import 'helpers/mock_supabase_service.dart';
 
@@ -109,5 +110,25 @@ void main() {
     navigator.pushNamed('/forgot-password');
     await tester.pumpAndSettle();
     expect(find.byType(ForgotPasswordPage), findsOneWidget);
+  });
+
+  testWidgets('MyApp écarte ses écrans de l\'encoche et des boutons', (
+    WidgetTester tester,
+  ) async {
+    final mockSupabaseService = MockSupabaseService();
+    when(() => mockSupabaseService.getCurrentUser()).thenReturn(null);
+    when(() => mockSupabaseService.onAuthStateChange).thenAnswer((_) => const Stream.empty());
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => AuthProvider(supabaseService: mockSupabaseService),
+        child: const MyApp(),
+      ),
+    );
+
+    // L'audit en paysage monte ses écrans avec ce même cadre : c'est ce test
+    // qui garantit que l'app, elle, s'en sert vraiment.
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.builder, appFrame);
   });
 }

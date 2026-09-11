@@ -87,8 +87,12 @@ class GalleryGrid extends StatelessWidget {
         ),
       );
     }
-    return GridView.count(
-      crossAxisCount: 3,
+    return GridView.extent(
+      // Une largeur de tuile plutôt qu'un nombre de colonnes : trois colonnes
+      // figées donnaient des tuiles d'environ 240 dp téléphone couché, soit une
+      // seule rangée par écran. Le téléphone de test garde ses trois colonnes
+      // en portrait, et en affiche cinq une fois couché.
+      maxCrossAxisExtent: 160,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 16,

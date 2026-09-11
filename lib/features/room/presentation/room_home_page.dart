@@ -10,10 +10,14 @@ import 'expandable_text.dart';
 import 'feed/room_post_composer_page.dart';
 import 'room_route.dart';
 import 'zoomable_image_viewer.dart';
+import '../../../ui/window_size.dart';
 
 const Color _bgColor = Color(0xFF161622);
 const Color _cardColor = Color(0xFF232336);
 const Color _primaryColor = Color(0xFF6FE3E1);
+
+/// Largeur de la colonne d'en-tête, téléphone couché.
+const double _headerColumnWidth = 320;
 
 /// Accueil d'une room : son identité, puis le fil publié par le MJ.
 ///
@@ -168,43 +172,69 @@ class _RoomHomePageState extends State<RoomHomePage> {
               onPressed: _compose,
             )
           : null,
-      body: RefreshIndicator(
-        onRefresh: () async => _reload(),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
-          children: [
+      // Couché, l'en-tête occupait tout le premier écran et repoussait le fil
+      // — le contenu principal de l'onglet — sous la ligne de flottaison. Il
+      // passe alors dans sa propre colonne, et le fil garde toute la hauteur.
+      body: isCompactLandscape(context)
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  width: _headerColumnWidth,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 0, 20),
+                    child: _buildHeader(),
+                  ),
+                ),
+                Expanded(
+                  child: _buildFeed(isMj: room.isMj, withHeader: false),
+                ),
+              ],
+            )
+          : _buildFeed(isMj: room.isMj, withHeader: true),
+    );
+  }
+
+  /// Le fil, rechargeable d'un geste, précédé de l'en-tête quand celui-ci n'a
+  /// pas sa propre colonne.
+  Widget _buildFeed({required bool isMj, required bool withHeader}) {
+    return RefreshIndicator(
+      onRefresh: () async => _reload(),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+        children: [
+          if (withHeader) ...[
             _buildHeader(),
             const SizedBox(height: 28),
-            const Text(
-              'Le fil de la table',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            FutureBuilder<List<Map<String, dynamic>>>(
-              future: _postsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-
-                final posts = snapshot.data ?? const [];
-                if (posts.isEmpty) return _buildEmptyFeed(room.isMj);
-
-                return Column(
-                  children:
-                      posts.map((post) => _buildPost(post, room.isMj)).toList(),
-                );
-              },
-            ),
           ],
-        ),
+          const Text(
+            'Le fil de la table',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _postsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              final posts = snapshot.data ?? const [];
+              if (posts.isEmpty) return _buildEmptyFeed(isMj);
+
+              return Column(
+                children: posts.map((post) => _buildPost(post, isMj)).toList(),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:scriptoria/core/providers/auth_provider.dart';
 import 'package:scriptoria/core/providers/room_provider.dart';
+import 'package:scriptoria/ui/app_frame.dart';
+import 'package:scriptoria/ui/app_theme.dart';
 
 import 'mock_supabase_service.dart';
 
@@ -99,6 +101,10 @@ Widget wrapRoomScreen({
   return ChangeNotifierProvider<AuthProvider>.value(
     value: auth,
     child: MaterialApp(
+      // Le cadre de l'app, comme dans `main.dart` : sans lui, un écran testé
+      // couché ignorerait l'encoche et les boutons que l'app, elle, évite.
+      theme: appTheme,
+      builder: appFrame,
       home: ChangeNotifierProvider<RoomProvider>.value(
         value: room,
         child: child,
