@@ -51,6 +51,9 @@ void main() {
     );
     when(() => service.watchRoomTable('room_messages', kRoomId))
         .thenAnswer((_) => changes.stream);
+    // Les sondages ont leur propre abonnement : sans objet dans ces tests.
+    when(() => service.watchRoomTable('room_polls', kRoomId))
+        .thenAnswer((_) => const Stream.empty());
     when(() => service.deleteRoomMessage(any())).thenAnswer((_) async {});
   });
 

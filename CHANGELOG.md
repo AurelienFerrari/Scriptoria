@@ -22,6 +22,13 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   jamais son texte — citer un chuchotement ne le révèle donc jamais à qui
   n'avait pas le droit de le lire. Répondre publiquement à un chuchotement
   affiche un avertissement avant l'envoi
+- Sondages dans le chat, lancés par le MJ comme par un joueur : une question,
+  de deux à dix réponses, à choix unique ou multiple. Les votes sont anonymes
+  — la base ne renvoie que des totaux, et personne, pas même le MJ, ne peut
+  savoir qui a voté quoi. Les pourcentages ne s'affichent qu'une fois qu'on a
+  voté, ou pour toute la table quand le sondage est clos, et c'est la base
+  qui en décide. On peut changer d'avis tant que l'auteur du sondage ou le MJ
+  ne l'a pas clos, et les résultats se mettent à jour en temps réel
 
 ### Corrigé
 - Le chat affichait trois messages codés en dur (« Bienvenue dans le chat ! »,

@@ -3,6 +3,10 @@ enum RowChangeKind {
   /// Une ligne vient d'être insérée ; [RowChange.record] la contient.
   inserted,
 
+  /// Une ligne vient d'être modifiée ; [RowChange.record] contient sa nouvelle
+  /// version, telle que la RLS permet à l'abonné de la lire.
+  updated,
+
   /// Une ligne vient d'être supprimée. [RowChange.record] ne contient que son
   /// `id` : Realtime n'en diffuse pas davantage, et c'est voulu — voir la
   /// migration `room_messages_realtime`.

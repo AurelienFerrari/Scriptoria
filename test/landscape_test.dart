@@ -23,6 +23,7 @@ import 'package:scriptoria/features/room/presentation/outils/de_page.dart';
 import 'package:scriptoria/features/room/presentation/outils/frise_page.dart';
 import 'package:scriptoria/features/room/presentation/outils/relations_page.dart';
 import 'package:scriptoria/features/room/presentation/outils/timeline_event_editor_page.dart';
+import 'package:scriptoria/features/room/presentation/room_poll_composer_page.dart';
 import 'package:scriptoria/features/room/presentation/shell/room_shell.dart';
 import 'package:scriptoria/features/room/presentation/zoomable_image_viewer.dart';
 import 'package:scriptoria/ui/app_frame.dart';
@@ -389,6 +390,46 @@ void _stubRichData(MockSupabaseService service) {
         "reply_to": "message-1",
         "created_at": "2026-09-11T10:02:00Z",
       },
+      {
+        "id": "message-p",
+        "campaign_id": kRoomId,
+        "author_id": kPlayerId,
+        "body": "Par quel chemin rejoignons-nous la citadelle avant la nuit ?",
+        "kind": "poll",
+        "visible_to": null,
+        "reply_to": null,
+        "created_at": "2026-09-11T10:03:00Z",
+      },
+    ],
+  );
+  // Un sondage déjà voté : les barres de résultats sont la partie la plus
+  // large de la carte.
+  when(() => service.getRoomPolls(any())).thenAnswer(
+    (_) async => [
+      {
+        "poll_id": "poll-1",
+        "message_id": "message-p",
+        "multiple": true,
+        "closed": false,
+        "revealed": true,
+        "total_voters": 3,
+        "my_votes": ["opt-1"],
+        "options": [
+          {
+            "id": "opt-1",
+            "label": "Par les égouts, sous la place du marché",
+            "position": 0,
+            "votes": 2
+          },
+          {"id": "opt-2", "label": "Par les toits", "position": 1, "votes": 1},
+          {
+            "id": "opt-3",
+            "label": "Par la grande porte",
+            "position": 2,
+            "votes": 0
+          },
+        ],
+      },
     ],
   );
   when(() => service.getDiceRolls(kRoomId, limit: any(named: 'limit')))
@@ -619,6 +660,7 @@ void main() {
           'Éditeur de note':
               RoomNoteEditorPage(note: _note('note-1', 'Intrigue')),
           'Nouvelle publication': const RoomPostComposerPage(),
+          "Nouveau sondage": const RoomPollComposerPage(),
           'Éditeur d\'évènement':
               TimelineEventEditorPage(event: _event('event-1', 0)),
         };
