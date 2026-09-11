@@ -17,6 +17,21 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   publication : toute la table, une sélection de joueurs, ou vous seul tant
   qu'il n'est pas révélé. Le filtrage est appliqué par la RLS, pas par
   l'interface — un joueur qui interrogerait l'API ne verrait pas davantage
+- L'application se tient téléphone couché, sur tous ses écrans. Là où la
+  hauteur manque, les écrans passent en deux colonnes : le dé garde son
+  résultat visible à côté des réglages, l'accueil d'une room range son
+  en-tête à gauche du fil, et l'onglet Outils aligne ses trois outils. La
+  galerie passe de trois à cinq colonnes, et les formulaires défilent quand le
+  clavier mange la moitié de la hauteur
+
+### Corrigé
+- Téléphone couché, quatre écrans débordaient, du texte, des champs ou des
+  boutons passaient sous l'encoche de la caméra ou sous les boutons de
+  navigation — dont l'onglet « Paramètres » de chaque room —, et le résultat
+  d'un lancer de dé tombait sous la ligne de flottaison : on appuyait sur
+  « Lancer » sans rien voir changer. La zone sûre est désormais posée une fois
+  pour toutes autour de l'application, et un audit automatisé de chaque écran
+  en paysage fait échouer la CI à la moindre régression — bogue B28
 
 ## [0.10.0] - 2026-09-10
 

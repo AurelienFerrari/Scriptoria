@@ -9,6 +9,8 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:scriptoria/core/services/supabase_service.dart';
 import 'core/navigation/route_observer.dart';
+import 'ui/app_frame.dart';
+import 'ui/app_theme.dart';
 import 'core/providers/auth_provider.dart';
 import 'firebase_options.dart';
 import 'features/home/presentation/pages/home_page.dart';
@@ -84,7 +86,7 @@ class SupabaseInitErrorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Scriptoria',
-      theme: ThemeData.dark(),
+      theme: appTheme,
       home: Scaffold(
         body: Center(
           child: Padding(
@@ -148,8 +150,10 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       navigatorKey: navigatorKey,
       navigatorObservers: [routeObserver],
+      // Écarte tous les écrans de l'encoche et des boutons, téléphone couché.
+      builder: appFrame,
       title: 'Scriptoria',
-      theme: ThemeData.dark(),
+      theme: appTheme,
       home: isLoggedIn ? const HomePage() : const LoginPage(),
       routes: {
         '/home': (context) => const HomePage(),

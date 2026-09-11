@@ -9,6 +9,7 @@ import '../../../../core/providers/room_provider.dart';
 import '../../../../core/utils/friendly_error.dart';
 import '../../domain/dice.dart';
 import 'dice_journal.dart';
+import '../../../../ui/window_size.dart';
 
 const Color _bgColor = Color(0xFF161622);
 const Color _cardColor = Color(0xFF232336);
@@ -194,43 +195,104 @@ class _DePageState extends State<DePage> with TickerProviderStateMixin {
   }
 
   Widget _buildRollTab(RoomProvider room) {
-    // Le bouton « Lancer » est ancré hors de la zone défilante : le bloc de
-    // résultat change de hauteur selon le nombre de dés, et l'action
-    // principale ne doit pas se déplacer sous le doigt entre deux jets.
-    // `SafeArea` l'écarte de la barre de navigation du téléphone.
+    // `SafeArea` écarte l'onglet de la barre de navigation du téléphone.
     return SafeArea(
-      child: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildSidesSelector(),
-                  const SizedBox(height: 24),
-                  _buildCountAndModifier(),
-                  if (room.isMj) ...[
-                    const SizedBox(height: 8),
-                    _buildSecretToggle(),
-                  ],
-                  const SizedBox(height: 24),
-                  _buildResult(),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-            child: _buildRollButton(),
-          ),
-        ],
-      ),
+      // Couché, il ne reste qu'environ 200 dp sous les onglets : réglages,
+      // résultat et bouton ne tiennent plus l'un sous l'autre, et le dé
+      // tombait sous la ligne de flottaison — on appuyait sur « Lancer » sans
+      // rien voir changer. Réglages et bouton passent alors à gauche, et le
+      // résultat occupe seul toute la hauteur à droite.
+      child: isCompactLandscape(context)
+          ? _buildRollTabSideBySide(room)
+          : _buildRollTabStacked(room),
     );
   }
 
-  /// Réservé au MJ : un joueur qui pourrait masquer ses jets ne masquerait que
-  /// ceux qui l'arrangent. La policy d'insertion le refuse de toute façon.
+  /// Disposition de base, en colonne.
+  ///
+  /// Le bouton « Lancer » est ancré hors de la zone défilante : le bloc de
+  /// résultat change de hauteur selon le nombre de dés, et l'action principale
+  /// ne doit pas se déplacer sous le doigt entre deux jets.
+  Widget _buildRollTabStacked(RoomProvider room) {
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ..._buildSettings(room),
+                const SizedBox(height: 24),
+                _buildResult(),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+          child: _buildRollButton(),
+        ),
+      ],
+    );
+  }
+
+  /// Téléphone couché : les réglages et le bouton à gauche, le résultat seul
+  /// à droite, sur toute la hauteur.
+  Widget _buildRollTabSideBySide(RoomProvider room) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 12, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: _buildSettings(room),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 12, 16),
+                child: _buildRollButton(),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          // Centré tant qu'il tient, défilant sinon : dix dés s'étalent sur
+          // plusieurs rangées.
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(12, 16, 24, 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: _buildResult(compact: true),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Ce qu'on règle avant de lancer : type de dé, nombre, modificateur et,
+  /// pour le MJ, jet secret.
+  List<Widget> _buildSettings(RoomProvider room) {
+    return [
+      _buildSidesSelector(),
+      const SizedBox(height: 24),
+      _buildCountAndModifier(),
+      if (room.isMj) ...[
+        const SizedBox(height: 8),
+        _buildSecretToggle(),
+      ],
+    ];
+  }
+
   Widget _buildSecretToggle() {
     return SwitchListTile(
       value: _isSecret,
@@ -245,14 +307,14 @@ class _DePageState extends State<DePage> with TickerProviderStateMixin {
     );
   }
 
-
   Widget _buildSidesSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'Type de dé',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+          style: TextStyle(
+              color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -272,7 +334,8 @@ class _DePageState extends State<DePage> with TickerProviderStateMixin {
                 color: selected ? _bgColor : Colors.white,
                 fontWeight: FontWeight.w600,
               ),
-              side: BorderSide(color: selected ? _primaryColor : Colors.white24),
+              side:
+                  BorderSide(color: selected ? _primaryColor : Colors.white24),
             );
           }).toList(),
         ),
@@ -300,7 +363,9 @@ class _DePageState extends State<DePage> with TickerProviderStateMixin {
           child: _buildStepper(
             label: 'Modificateur',
             value: _notation.modifier,
-            display: _notation.modifier > 0 ? '+${_notation.modifier}' : '${_notation.modifier}',
+            display: _notation.modifier > 0
+                ? '+${_notation.modifier}'
+                : '${_notation.modifier}',
             onChanged: (delta) {
               final next = _notation.modifier + delta;
               if (next.abs() > DiceNotation.maxModifier) return;
@@ -323,7 +388,8 @@ class _DePageState extends State<DePage> with TickerProviderStateMixin {
       children: [
         Text(
           label,
-          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+              color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
         Container(
@@ -359,7 +425,7 @@ class _DePageState extends State<DePage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildResult() {
+  Widget _buildResult({bool compact = false}) {
     final roll = _lastRoll;
 
     Color accent = _primaryColor;
@@ -372,12 +438,18 @@ class _DePageState extends State<DePage> with TickerProviderStateMixin {
       mention = 'Échec critique';
     }
 
+    // Couché, la hauteur manque : on resserre les marges plutôt que de
+    // réduire le dé ou le total, qui sont ce qu'on vient voir.
+    final gap = compact ? 12.0 : 20.0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+      padding:
+          EdgeInsets.symmetric(vertical: compact ? 20 : 32, horizontal: 24),
       decoration: BoxDecoration(
         color: _cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: accent.withOpacity(roll == null ? 0.2 : 0.6), width: 2),
+        border: Border.all(
+            color: accent.withOpacity(roll == null ? 0.2 : 0.6), width: 2),
       ),
       child: roll == null
           ? Column(
@@ -404,9 +476,10 @@ class _DePageState extends State<DePage> with TickerProviderStateMixin {
                   children: [
                     Text(
                       roll.notation.label,
-                      style: const TextStyle(color: Colors.white70, fontSize: 16),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 16),
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: gap),
                     _buildDice(roll, t, accent),
                     // Le calcul n'apparaît qu'une fois tous les dés posés :
                     // afficher un total pendant que les dés tournent encore
@@ -416,11 +489,13 @@ class _DePageState extends State<DePage> with TickerProviderStateMixin {
                       duration: const Duration(milliseconds: 180),
                       child: Column(
                         children: [
-                          const SizedBox(height: 20),
-                          if (roll.results.length > 1 || roll.notation.modifier != 0)
+                          SizedBox(height: gap),
+                          if (roll.results.length > 1 ||
+                              roll.notation.modifier != 0)
                             Text(
                               roll.detail,
-                              style: const TextStyle(color: Colors.white70, fontSize: 15),
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 15),
                               textAlign: TextAlign.center,
                             ),
                           const SizedBox(height: 4),
@@ -469,10 +544,12 @@ class _DePageState extends State<DePage> with TickerProviderStateMixin {
       children: List.generate(roll.results.length, (i) {
         final settleAt = _settleFraction(i);
         final settled = t >= settleAt;
-        final spinProgress = settleAt == 0 ? 1.0 : (t / settleAt).clamp(0.0, 1.0);
+        final spinProgress =
+            settleAt == 0 ? 1.0 : (t / settleAt).clamp(0.0, 1.0);
 
         return _DieFace(
-          value: settled ? roll.results[i] : _spinningFace(i, spinProgress, sides),
+          value:
+              settled ? roll.results[i] : _spinningFace(i, spinProgress, sides),
           sides: sides,
           size: size,
           settled: settled,
@@ -497,7 +574,6 @@ class _DePageState extends State<DePage> with TickerProviderStateMixin {
       onPressed: _roll,
     );
   }
-
 }
 
 /// Un dé du jet, affiché seul.
@@ -531,8 +607,10 @@ class _DieFace extends StatelessWidget {
     // Oscillation et flottement amortis : l'amplitude décroît avec
     // `1 - spinProgress`, le dé se stabilise donc au lieu de s'arrêter net.
     final damping = 1 - spinProgress;
-    final wobble = settled ? 0.0 : math.sin(spinProgress * math.pi * 7) * 0.30 * damping;
-    final lift = settled ? 0.0 : -math.sin(spinProgress * math.pi * 5) * 7 * damping;
+    final wobble =
+        settled ? 0.0 : math.sin(spinProgress * math.pi * 7) * 0.30 * damping;
+    final lift =
+        settled ? 0.0 : -math.sin(spinProgress * math.pi * 5) * 7 * damping;
 
     return Semantics(
       label: settled ? 'Dé à $sides faces : $value' : 'Dé en cours de lancer',
