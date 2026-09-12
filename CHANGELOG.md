@@ -17,6 +17,9 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   chercher, sans rien dévoiler
 - Le MJ crée ses catégories de lien (« famille », « conflit », « dette »...),
   chacune avec sa couleur, et la légende permet de n'en mettre qu'une en avant
+- Le MJ peut vider la carte en entier, avec une confirmation qui annonce ce
+  qui part : les ronds, leurs liens, leurs informations, les catégories et
+  les découvertes des joueurs
 - La carte se met à jour en temps réel : une information révélée apparaît chez
   son destinataire sans qu'il ait à rouvrir l'écran. Seul le signal circule,
   jamais le texte découvert

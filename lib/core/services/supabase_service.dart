@@ -995,6 +995,22 @@ class SupabaseService {
     await _client.from('room_relation_facts').delete().eq('id', factId);
   }
 
+  /// Efface toute la carte des relations d'une room.
+  ///
+  /// Supprimer les ronds emporte leurs liens, leurs informations et les
+  /// découvertes des joueurs, par cascade. Les catégories ne dépendent
+  /// d'aucun rond : elles sont effacées à part.
+  Future<void> clearRelationGraph(String campaignId) async {
+    await _client
+        .from('room_relation_nodes')
+        .delete()
+        .eq('campaign_id', campaignId);
+    await _client
+        .from('room_relation_categories')
+        .delete()
+        .eq('campaign_id', campaignId);
+  }
+
   /// Fixe d'un seul geste qui a découvert une information.
   ///
   /// Passe par `set_fact_discoverers` plutôt que par des écritures ligne à

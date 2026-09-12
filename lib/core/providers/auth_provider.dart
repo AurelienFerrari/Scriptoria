@@ -452,6 +452,10 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.deleteRelationFact(factId);
   }
 
+  Future<void> clearRelationGraph(String campaignId) {
+    return _supabaseService.clearRelationGraph(campaignId);
+  }
+
   Future<void> setFactDiscoverers({
     required String factId,
     required List<String> userIds,

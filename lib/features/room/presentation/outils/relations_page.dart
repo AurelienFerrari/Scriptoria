@@ -395,7 +395,11 @@ class _RelationsPageState extends State<RelationsPage> {
     );
   }
 
-  Future<bool> _confirm(String title, String message) async {
+  Future<bool> _confirm(
+    String title,
+    String message, {
+    String action = 'Supprimer',
+  }) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -409,12 +413,35 @@ class _RelationsPageState extends State<RelationsPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: Text(action, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
     return confirmed == true;
+  }
+
+  /// Efface toute la carte, après confirmation.
+  ///
+  /// Les informations et les découvertes partent avec leur rond, par cascade
+  /// en base : rien ne survit à un rond supprimé. La confirmation le dit
+  /// clairement, parce que les découvertes des joueurs sont la seule chose
+  /// qu'on ne peut pas reconstituer de mémoire.
+  Future<void> _clearGraph() async {
+    final sure = await _confirm(
+      'Vider la carte ?',
+      'Tous les ronds, leurs liens, leurs informations et les découvertes des '
+          'joueurs seront effacés, ainsi que les catégories. Cette action est '
+          'irréversible.',
+      action: 'Vider',
+    );
+    if (!sure || !mounted) return;
+
+    final auth = context.read<AuthProvider>();
+    final roomId = context.read<RoomProvider>().roomId;
+    final done = await _mutate(() => auth.clearRelationGraph(roomId));
+    // La carte est vide : la vue se recadre sur le rond « + ».
+    if (done && mounted) setState(() => _needsCentering = true);
   }
 
   /// Ouvre la liste des joueurs pour dire qui a découvert cette information.
@@ -992,6 +1019,12 @@ class _RelationsPageState extends State<RelationsPage> {
               icon: const Icon(Icons.center_focus_strong_outlined),
               tooltip: 'Recentrer la carte',
               onPressed: () => setState(() => _needsCentering = true),
+            ),
+          if (_isMj)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep_outlined, color: Colors.red),
+              tooltip: 'Vider la carte',
+              onPressed: _clearGraph,
             ),
         ],
       ),

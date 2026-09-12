@@ -133,6 +133,7 @@ void main() {
           linkId: any(named: 'linkId'),
           categoryId: any(named: 'categoryId'),
         )).thenAnswer((_) async {});
+    when(() => service.clearRelationGraph(any())).thenAnswer((_) async {});
   });
 
   tearDown(() => changes.close());
@@ -441,6 +442,43 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('vide toute la carte après confirmation', (tester) async {
+      await pumpMap(
+        tester,
+        _graph(isMj: true, nodes: [_node()], categories: [_category()]),
+        asMj: true,
+      );
+
+      await tester.tap(find.byTooltip('Vider la carte'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vider la carte ?'), findsOneWidget);
+      // La confirmation annonce ce qui ne se reconstitue pas.
+      expect(find.textContaining('découvertes des joueurs'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Vider'));
+      await tester.pumpAndSettle();
+
+      verify(() => service.clearRelationGraph(kRoomId)).called(1);
+    });
+
+    testWidgets('ne vide rien si on renonce', (tester) async {
+      await pumpMap(tester, _graph(isMj: true, nodes: [_node()]), asMj: true);
+
+      await tester.tap(find.byTooltip('Vider la carte'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Annuler'));
+      await tester.pumpAndSettle();
+
+      verifyNever(() => service.clearRelationGraph(any()));
+    });
+  });
+
+  testWidgets('un joueur ne peut pas vider la carte', (tester) async {
+    await pumpMap(tester, _graph(nodes: [_node()]));
+
+    expect(find.byTooltip('Vider la carte'), findsNothing);
   });
 
   testWidgets('la légende met une catégorie en avant', (tester) async {
