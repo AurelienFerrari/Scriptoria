@@ -856,6 +856,226 @@ class SupabaseService {
     await _client.rpc('close_room_poll', params: {'p_poll_id': pollId});
   }
 
+  // ============ CARTE DES RELATIONS ============
+
+  /// Carte complète : légende, ronds, liens, et les informations que
+  /// l'utilisateur a le droit de lire.
+  ///
+  /// Tout passe par la fonction `get_relation_graph`, qui masque en base le
+  /// texte des informations non découvertes et n'en renvoie que le nombre.
+  /// Une erreur n'est pas avalée ici : ne pas être membre de la room doit se
+  /// voir à l'écran, et non se confondre avec une carte vide.
+  Future<Map<String, dynamic>> getRelationGraph(String campaignId) async {
+    final graph = await _client.rpc(
+      'get_relation_graph',
+      params: {'p_campaign_id': campaignId},
+    );
+    return Map<String, dynamic>.from(graph as Map);
+  }
+
+  Future<Map<String, dynamic>> createRelationNode({
+    required String campaignId,
+    required String label,
+    required String kind,
+    required double x,
+    required double y,
+    String? categoryId,
+  }) async {
+    return await _client
+        .from('room_relation_nodes')
+        .insert({
+          'campaign_id': campaignId,
+          'label': label,
+          'kind': kind,
+          'x': x,
+          'y': y,
+          'category_id': categoryId,
+        })
+        .select()
+        .single();
+  }
+
+  /// Seuls les champs fournis sont écrits : déplacer un rond ne renomme rien.
+  Future<void> updateRelationNode({
+    required String nodeId,
+    String? label,
+    String? kind,
+    double? x,
+    double? y,
+  }) async {
+    await _client.from('room_relation_nodes').update({
+      if (label != null) 'label': label,
+      if (kind != null) 'kind': kind,
+      if (x != null) 'x': x,
+      if (y != null) 'y': y,
+    }).eq('id', nodeId);
+  }
+
+  /// Range un rond dans une catégorie, ou l'en sort avec `null`.
+  ///
+  /// À part de [updateRelationNode], qui n'écrit que les champs fournis :
+  /// ici, `null` est une valeur qui veut dire « sans catégorie », et non une
+  /// absence de changement.
+  Future<void> setRelationNodeCategory({
+    required String nodeId,
+    String? categoryId,
+  }) async {
+    await _client
+        .from('room_relation_nodes')
+        .update({'category_id': categoryId}).eq('id', nodeId);
+  }
+
+  /// Dépose l'image d'un rond et renvoie son URL publique.
+  ///
+  /// Elle va dans le bucket de la galerie, sous l'identifiant de son auteur —
+  /// ce qu'exige la policy Storage `images_owner_write` — mais sans ligne dans
+  /// `images` : l'image appartient au rond, pas à la galerie de la room, et
+  /// n'a donc pas à apparaître dans les contenus.
+  Future<String?> uploadRelationNodeImage({
+    required XFile file,
+    required String ownerId,
+    required String nodeId,
+  }) {
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    return uploadImage(
+      file: file,
+      bucket: galleryBucket,
+      fileName: '$ownerId/relations/$nodeId-$stamp.jpg',
+    );
+  }
+
+  /// Pose l'image d'un rond, ou la retire avec `null`.
+  ///
+  /// Le fichier reste dans le bucket : le MJ peut retirer l'image d'un rond
+  /// sans posséder le fichier, et mieux vaut un fichier orphelin qu'un rond
+  /// qu'on ne peut plus dépouiller.
+  Future<void> setRelationNodeImage({
+    required String nodeId,
+    String? imageUrl,
+  }) async {
+    await _client
+        .from('room_relation_nodes')
+        .update({'image_url': imageUrl}).eq('id', nodeId);
+  }
+
+  Future<void> deleteRelationNode(String nodeId) async {
+    await _client.from('room_relation_nodes').delete().eq('id', nodeId);
+  }
+
+  Future<void> createRelationLink({
+    required String campaignId,
+    required String fromNodeId,
+    required String toNodeId,
+    String? categoryId,
+    String? label,
+  }) async {
+    await _client.from('room_relation_links').insert({
+      'campaign_id': campaignId,
+      'from_node_id': fromNodeId,
+      'to_node_id': toNodeId,
+      'category_id': categoryId,
+      'label': label,
+    });
+  }
+
+  /// Change la catégorie d'un lien déjà posé, ou la retire avec `null`.
+  Future<void> updateRelationLink({
+    required String linkId,
+    String? categoryId,
+  }) async {
+    await _client
+        .from('room_relation_links')
+        .update({'category_id': categoryId}).eq('id', linkId);
+  }
+
+  Future<void> deleteRelationLink(String linkId) async {
+    await _client.from('room_relation_links').delete().eq('id', linkId);
+  }
+
+  Future<Map<String, dynamic>> createRelationCategory({
+    required String campaignId,
+    required String name,
+    required int color,
+    required int position,
+  }) async {
+    return await _client
+        .from('room_relation_categories')
+        .insert({
+          'campaign_id': campaignId,
+          'name': name,
+          'color': color,
+          'position': position,
+        })
+        .select()
+        .single();
+  }
+
+  Future<void> deleteRelationCategory(String categoryId) async {
+    await _client
+        .from('room_relation_categories')
+        .delete()
+        .eq('id', categoryId);
+  }
+
+  Future<void> createRelationFact({
+    required String campaignId,
+    required String nodeId,
+    required String content,
+    required int position,
+  }) async {
+    await _client.from('room_relation_facts').insert({
+      'campaign_id': campaignId,
+      'node_id': nodeId,
+      'content': content,
+      'position': position,
+    });
+  }
+
+  Future<void> updateRelationFact({
+    required String factId,
+    required String content,
+  }) async {
+    await _client
+        .from('room_relation_facts')
+        .update({'content': content}).eq('id', factId);
+  }
+
+  Future<void> deleteRelationFact(String factId) async {
+    await _client.from('room_relation_facts').delete().eq('id', factId);
+  }
+
+  /// Efface toute la carte des relations d'une room.
+  ///
+  /// Supprimer les ronds emporte leurs liens, leurs informations et les
+  /// découvertes des joueurs, par cascade. Les catégories ne dépendent
+  /// d'aucun rond : elles sont effacées à part.
+  Future<void> clearRelationGraph(String campaignId) async {
+    await _client
+        .from('room_relation_nodes')
+        .delete()
+        .eq('campaign_id', campaignId);
+    await _client
+        .from('room_relation_categories')
+        .delete()
+        .eq('campaign_id', campaignId);
+  }
+
+  /// Fixe d'un seul geste qui a découvert une information.
+  ///
+  /// Passe par `set_fact_discoverers` plutôt que par des écritures ligne à
+  /// ligne : la fonction vérifie que le MJ est bien le MJ, écarte ceux qui ne
+  /// sont pas membres de la room, et touche le rond pour que la carte se
+  /// rafraîchisse chez tout le monde.
+  Future<void> setFactDiscoverers({
+    required String factId,
+    required List<String> userIds,
+  }) async {
+    await _client.rpc('set_fact_discoverers', params: {
+      'p_fact_id': factId,
+      'p_user_ids': userIds,
+    });
+  }
+
   // ============ TEMPS RÉEL ============
 
   /// Insertions, modifications et suppressions sur [table] pour la room

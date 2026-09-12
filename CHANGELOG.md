@@ -6,6 +6,70 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Corrigé
+- Corriger une information de la carte des relations échouait. Les policies
+  des informations et des découvertes se lisaient l'une l'autre, et Postgres
+  refusait la requête pour récursion infinie. Le défaut ne se voyait nulle
+  part ailleurs : lire la carte passe par une fonction `security definer`, et
+  créer une information est un `insert` sans relecture — mais une mise à jour
+  doit retrouver sa ligne, donc évaluer la policy de lecture. Chaque test
+  passe désormais par une fonction `security definer`, comme
+  `is_campaign_member`, ce qui rompt le cycle sans rien élargir
+- Une écriture refusée s'annonce maintenant dans une boîte. Elle s'affichait
+  dans une SnackBar, qui passe derrière la feuille modale d'où partent presque
+  toutes les actions du MJ : l'erreur existait, mais le geste avait l'air de
+  n'avoir simplement rien fait
+
+### Ajouté
+- Carte des relations de la room, dans l'esprit du journal de bord d'Outer
+  Wilds : des ronds — personnages, lieux, objets, évènements — reliés par des
+  liens de couleur, que le MJ place lui-même et complète par un rond « + ».
+  Chaque rond porte des informations, et chacun ne lit que celles qu'il a
+  découvertes ; les autres s'affichent en « ??? ». Le tri est fait par la
+  base : le texte d'une information non découverte n'arrive jamais jusqu'à
+  l'appareil, seul son nombre est connu — de quoi savoir qu'il reste à
+  chercher, sans rien dévoiler
+- Le MJ crée ses catégories (« famille », « conflit », « dette »...), chacune
+  avec sa couleur. Elle se pose aussi bien sur un lien que sur un rond, depuis
+  la fiche du rond ou dès sa création : une même couleur réunit alors une
+  famille ou un camp d'un coup d'œil. Colorer un rond ne fait pas perdre le
+  signal des découvertes, que la pastille de comptage continue de porter
+- La mise en avant éclaire le fil entier : les ronds pris dans la catégorie
+  par leurs liens s'allument et en prennent la couleur, et pas seulement ceux
+  qui la portent en propre. Auparavant seuls les traits s'éclairaient, entre
+  des ronds restés éteints
+- La légende met une catégorie en avant et estompe les autres, ronds compris.
+  Elle est annoncée comme telle — « Mettre en avant » — parce qu'on la prenait
+  pour un moyen d'attribuer une couleur, et que la voir agir sur toute la carte
+  donnait l'impression de tout modifier
+- Un rond peut porter une image, affichée en miniature dans le rond lui-même
+  et en grand dans sa fiche, d'où un toucher l'ouvre en plein écran, zoomable.
+  Sur une carte qui compte vingt ronds, un portrait se reconnaît plus vite
+  qu'un nom. Une image absente ou illisible ne troue pas la carte : le rond
+  retombe sur son icône de type
+- Les informations d'un rond se lisent en plus grand, et une explication trop
+  longue est repliée à une ligne, dépliable par « Voir plus » — le même repli
+  que sur le fil et la frise. Rien ne borne la longueur d'une information, et
+  une seule un peu longue rendait la fiche impossible à parcourir
+- Une information s'écrit sur plusieurs paragraphes, dans un champ à hauteur
+  réservée qui défile en lui-même et où Entrée passe à la ligne. Le champ
+  était plafonné à quatre lignes et enfermé dans une boîte défilante : faire
+  glisser le texte déplaçait la boîte, et la fin d'une information déjà
+  longue restait inatteignable — on pouvait l'écrire, pas la reprendre
+- Le MJ peut corriger une information déjà écrite, et pas seulement l'ajouter
+  ou la supprimer. Le texte part tel quel dans le champ, et ce qui a déjà été
+  découvert le reste — corriger n'est pas re-cacher
+- Le MJ peut vider la carte en entier, avec une confirmation qui annonce ce
+  qui part : les ronds, leurs liens, leurs informations, les catégories et
+  les découvertes des joueurs
+- La carte se met à jour en temps réel : une information révélée apparaît chez
+  son destinataire sans qu'il ait à rouvrir l'écran. Seul le signal circule,
+  jamais le texte découvert
+- Mesure de fluidité sur cette carte, le seul écran qui dessine et suive le
+  doigt : le nombre d'images affichées, les lentes et les gelées partent sur
+  une trace Firebase Performance. Les chiffres ne remontent qu'en mode profil
+  ou release, la collecte étant désactivée en débogage
+
 ## [0.12.0] - 2026-09-12
 
 ### Ajouté
