@@ -6,6 +6,8 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.12.0] - 2026-09-12
+
 ### Ajouté
 - Chat de la room, enregistré et partagé en temps réel : un message apparaît
   chez tous les membres sans rafraîchir. Il ne vivait jusqu'ici qu'en mémoire,
