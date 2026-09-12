@@ -346,6 +346,7 @@ class AuthProvider extends ChangeNotifier {
     required String kind,
     required double x,
     required double y,
+    String? categoryId,
   }) {
     return _supabaseService.createRelationNode(
       campaignId: campaignId,
@@ -353,6 +354,7 @@ class AuthProvider extends ChangeNotifier {
       kind: kind,
       x: x,
       y: y,
+      categoryId: categoryId,
     );
   }
 
@@ -369,6 +371,16 @@ class AuthProvider extends ChangeNotifier {
       kind: kind,
       x: x,
       y: y,
+    );
+  }
+
+  Future<void> setRelationNodeCategory({
+    required String nodeId,
+    String? categoryId,
+  }) {
+    return _supabaseService.setRelationNodeCategory(
+      nodeId: nodeId,
+      categoryId: categoryId,
     );
   }
 

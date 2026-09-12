@@ -31,6 +31,7 @@ Map<String, dynamic> _node({
   String id = 'node-1',
   String label = 'Le baron',
   String kind = 'person',
+  String? categoryId,
   double x = 400,
   double y = 400,
   List<Map<String, dynamic>> facts = const [],
@@ -39,6 +40,7 @@ Map<String, dynamic> _node({
       'id': id,
       'label': label,
       'kind': kind,
+      'category_id': categoryId,
       'x': x,
       'y': y,
       'fact_count': facts.length,
@@ -103,9 +105,14 @@ void main() {
           campaignId: any(named: 'campaignId'),
           label: any(named: 'label'),
           kind: any(named: 'kind'),
+          categoryId: any(named: 'categoryId'),
           x: any(named: 'x'),
           y: any(named: 'y'),
         )).thenAnswer((_) async => _node());
+    when(() => service.setRelationNodeCategory(
+          nodeId: any(named: 'nodeId'),
+          categoryId: any(named: 'categoryId'),
+        )).thenAnswer((_) async {});
     when(() => service.updateRelationNode(
           nodeId: any(named: 'nodeId'),
           label: any(named: 'label'),
@@ -252,6 +259,7 @@ void main() {
 
       expect(find.text('Information'), findsNothing);
       expect(find.text('Relier'), findsNothing);
+      expect(find.text('Catégorie'), findsNothing);
       expect(find.byTooltip('Supprimer le rond'), findsNothing);
       expect(find.byTooltip('Qui a découvert cette information'), findsNothing);
     });
@@ -278,8 +286,61 @@ void main() {
             campaignId: kRoomId,
             label: 'La citadelle',
             kind: 'place',
+            categoryId: null,
             x: any(named: 'x'),
             y: any(named: 'y'),
+          )).called(1);
+    });
+
+    testWidgets('donne une catégorie au rond dès sa création', (tester) async {
+      await pumpMap(
+        tester,
+        _graph(isMj: true, categories: [_category()]),
+        asMj: true,
+      );
+
+      await tester.tap(find.byTooltip('Ajouter un rond'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Nom'),
+        'La citadelle',
+      );
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Conflit'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Valider'));
+      await tester.pumpAndSettle();
+
+      verify(() => service.createRelationNode(
+            campaignId: kRoomId,
+            label: 'La citadelle',
+            kind: 'person',
+            categoryId: 'cat-1',
+            x: any(named: 'x'),
+            y: any(named: 'y'),
+          )).called(1);
+    });
+
+    testWidgets('range un rond dans une catégorie depuis sa fiche',
+        (tester) async {
+      await pumpMap(
+        tester,
+        _graph(isMj: true, nodes: [_node()], categories: [_category()]),
+        asMj: true,
+      );
+
+      await tester.tap(find.text('Le baron'));
+      await tester.pumpAndSettle();
+      // L'attribution se fait depuis le rond, et non depuis la légende.
+      await tester.tap(find.text('Catégorie'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Catégorie du rond'), findsOneWidget);
+      await tester.tap(find.text('Conflit').last);
+      await tester.pumpAndSettle();
+
+      verify(() => service.setRelationNodeCategory(
+            nodeId: 'node-1',
+            categoryId: 'cat-1',
           )).called(1);
     });
 
@@ -381,10 +442,10 @@ void main() {
       expect(moved[1] as double, greaterThan(400));
     });
 
-    testWidgets('crée une catégorie de lien', (tester) async {
+    testWidgets('crée une catégorie', (tester) async {
       await pumpMap(tester, _graph(isMj: true), asMj: true);
 
-      await tester.tap(find.byTooltip('Catégories de lien'));
+      await tester.tap(find.byTooltip('Catégories'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Ajouter une catégorie'));
       await tester.pumpAndSettle();
@@ -481,6 +542,47 @@ void main() {
     expect(find.byTooltip('Vider la carte'), findsNothing);
   });
 
+  testWidgets('le rond porte la couleur de sa catégorie', (tester) async {
+    await pumpMap(
+      tester,
+      _graph(
+        nodes: [_node(categoryId: 'cat-1')],
+        categories: [_category()],
+      ),
+    );
+
+    final circle = tester.widget<Container>(
+      find
+          .ancestor(
+            of: find.byIcon(Icons.person_outline),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    final border = (circle.decoration as BoxDecoration).border as Border;
+
+    // Celle de la catégorie, et non celle de l'état des découvertes.
+    expect(border.top.color, const Color(0xFFE37B7B));
+  });
+
+  testWidgets('la couleur de catégorie ne masque pas ce qu\'il reste à trouver',
+      (tester) async {
+    await pumpMap(
+      tester,
+      _graph(
+        nodes: [
+          _node(categoryId: 'cat-1', facts: [_fact()]),
+        ],
+        categories: [_category()],
+      ),
+    );
+
+    // Le rond a pris la couleur de sa catégorie ; la pastille, elle, garde
+    // l'ambre qui dit qu'une information reste à découvrir ici.
+    final badge = tester.widget<Badge>(find.byType(Badge));
+    expect(badge.backgroundColor, const Color(0xFFE3C77B));
+  });
+
   testWidgets('la légende met une catégorie en avant', (tester) async {
     await pumpMap(
       tester,
@@ -491,6 +593,9 @@ void main() {
       ),
     );
 
+    // Annoncée comme un filtre du regard : sans cet intitulé, on la prend
+    // pour un moyen d'attribuer une couleur.
+    expect(find.text('Mettre en avant'), findsOneWidget);
     expect(find.widgetWithText(FilterChip, 'Conflit'), findsOneWidget);
     expect(
       tester.widget<FilterChip>(find.byType(FilterChip)).selected,

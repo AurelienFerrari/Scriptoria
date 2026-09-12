@@ -15,8 +15,15 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   base : le texte d'une information non découverte n'arrive jamais jusqu'à
   l'appareil, seul son nombre est connu — de quoi savoir qu'il reste à
   chercher, sans rien dévoiler
-- Le MJ crée ses catégories de lien (« famille », « conflit », « dette »...),
-  chacune avec sa couleur, et la légende permet de n'en mettre qu'une en avant
+- Le MJ crée ses catégories (« famille », « conflit », « dette »...), chacune
+  avec sa couleur. Elle se pose aussi bien sur un lien que sur un rond, depuis
+  la fiche du rond ou dès sa création : une même couleur réunit alors une
+  famille ou un camp d'un coup d'œil. Colorer un rond ne fait pas perdre le
+  signal des découvertes, que la pastille de comptage continue de porter
+- La légende met une catégorie en avant et estompe les autres, ronds compris.
+  Elle est annoncée comme telle — « Mettre en avant » — parce qu'on la prenait
+  pour un moyen d'attribuer une couleur, et que la voir agir sur toute la carte
+  donnait l'impression de tout modifier
 - Le MJ peut vider la carte en entier, avec une confirmation qui annonce ce
   qui part : les ronds, leurs liens, leurs informations, les catégories et
   les découvertes des joueurs

@@ -879,6 +879,7 @@ class SupabaseService {
     required String kind,
     required double x,
     required double y,
+    String? categoryId,
   }) async {
     return await _client
         .from('room_relation_nodes')
@@ -888,6 +889,7 @@ class SupabaseService {
           'kind': kind,
           'x': x,
           'y': y,
+          'category_id': categoryId,
         })
         .select()
         .single();
@@ -907,6 +909,20 @@ class SupabaseService {
       if (x != null) 'x': x,
       if (y != null) 'y': y,
     }).eq('id', nodeId);
+  }
+
+  /// Range un rond dans une catégorie, ou l'en sort avec `null`.
+  ///
+  /// À part de [updateRelationNode], qui n'écrit que les champs fournis :
+  /// ici, `null` est une valeur qui veut dire « sans catégorie », et non une
+  /// absence de changement.
+  Future<void> setRelationNodeCategory({
+    required String nodeId,
+    String? categoryId,
+  }) async {
+    await _client
+        .from('room_relation_nodes')
+        .update({'category_id': categoryId}).eq('id', nodeId);
   }
 
   Future<void> deleteRelationNode(String nodeId) async {

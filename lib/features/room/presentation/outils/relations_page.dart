@@ -26,7 +26,7 @@ const double _canvasPadding = 400;
 /// Écart entre le dernier rond posé et le rond « + ».
 const double _addSpotGap = 180;
 
-/// Palette proposée au MJ pour ses catégories de lien.
+/// Palette proposée au MJ pour ses catégories.
 const List<int> _categoryPalette = [
   0xFF6FE3E1,
   0xFFE3C77B,
@@ -117,7 +117,10 @@ class _RelationsPageState extends State<RelationsPage> {
   /// plus grande que l'écran, et son coin haut-gauche est vide.
   bool _needsCentering = true;
 
-  /// Catégorie de lien mise en avant, ou `null` pour toutes.
+  /// Catégorie mise en avant par la légende, ou `null` pour toutes.
+  ///
+  /// C'est un filtre du regard, et non une modification : il éclaire une
+  /// couleur et estompe le reste, sans rien écrire en base.
   String? _filter;
 
   final List<StreamSubscription<RowChange>> _changes = [];
@@ -338,6 +341,7 @@ class _RelationsPageState extends State<RelationsPage> {
           campaignId: roomId,
           label: created.label,
           kind: created.kind,
+          categoryId: created.categoryId,
           x: at.dx,
           y: at.dy,
         ));
@@ -350,7 +354,7 @@ class _RelationsPageState extends State<RelationsPage> {
   Future<_NodeDraft?> _askNode({Map<String, dynamic>? existing}) {
     return showDialog<_NodeDraft>(
       context: context,
-      builder: (ctx) => _NodeDialog(existing: existing),
+      builder: (ctx) => _NodeDialog(existing: existing, categories: _categories),
     );
   }
 
@@ -565,22 +569,25 @@ class _RelationsPageState extends State<RelationsPage> {
         ));
   }
 
-  /// Change la catégorie d'un lien déjà posé : c'est par là que les couleurs
-  /// créées par le MJ arrivent réellement sur la carte.
-  Future<void> _changeLinkCategory(Map<String, dynamic> link) async {
-    if (_categories.isEmpty) {
-      _showMessage('Créez d\'abord une catégorie, avec l\'icône palette.');
-      return;
-    }
+  /// Sans catégorie créée, il n'y a rien à choisir : mieux vaut le dire que
+  /// d'ouvrir une liste vide.
+  bool _hasCategories() {
+    if (_categories.isNotEmpty) return true;
+    _showMessage('Créez d\'abord une catégorie, avec l\'icône palette.');
+    return false;
+  }
 
-    final chosen = await showDialog<String?>(
+  /// Demande une catégorie.
+  ///
+  /// Renvoie `null` si on renonce, et une chaîne vide pour « sans catégorie »
+  /// — que l'appelant traduit en `null` pour la base. Les deux se distinguent :
+  /// retirer une catégorie n'est pas la même chose que ne rien changer.
+  Future<String?> _pickCategory(String title, {String? current}) {
+    return showDialog<String>(
       context: context,
       builder: (ctx) => SimpleDialog(
         backgroundColor: _cardColor,
-        title: const Text(
-          'Catégorie du lien',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
         children: [
           for (final category in _categories)
             SimpleDialogOption(
@@ -592,10 +599,14 @@ class _RelationsPageState extends State<RelationsPage> {
                     backgroundColor: Color((category['color'] as num).toInt()),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    category['name'] as String? ?? '',
-                    style: const TextStyle(color: Colors.white),
+                  Expanded(
+                    child: Text(
+                      category['name'] as String? ?? '',
+                      style: const TextStyle(color: Colors.white),
+                    ),
                   ),
+                  if (category['id'] == current)
+                    const Icon(Icons.check, color: _primaryColor, size: 18),
                 ],
               ),
             ),
@@ -609,11 +620,42 @@ class _RelationsPageState extends State<RelationsPage> {
         ],
       ),
     );
+  }
+
+  /// Change la catégorie d'un lien déjà posé : c'est par là que les couleurs
+  /// créées par le MJ arrivent réellement sur la carte.
+  Future<void> _changeLinkCategory(Map<String, dynamic> link) async {
+    if (!_hasCategories()) return;
+
+    final chosen = await _pickCategory(
+      'Catégorie du lien',
+      current: link['category_id'] as String?,
+    );
     if (chosen == null || !mounted) return;
 
     final auth = context.read<AuthProvider>();
     await _mutate(() => auth.updateRelationLink(
           linkId: link['id'] as String,
+          categoryId: chosen.isEmpty ? null : chosen,
+        ));
+  }
+
+  /// Range un rond dans une catégorie : c'est ce qui lui donne sa couleur.
+  ///
+  /// L'attribution se fait depuis le rond, et non depuis la légende : celle-ci
+  /// ne fait qu'éclairer une couleur sur toute la carte.
+  Future<void> _changeNodeCategory(Map<String, dynamic> node) async {
+    if (!_hasCategories()) return;
+
+    final chosen = await _pickCategory(
+      'Catégorie du rond',
+      current: node['category_id'] as String?,
+    );
+    if (chosen == null || !mounted) return;
+
+    final auth = context.read<AuthProvider>();
+    await _mutate(() => auth.setRelationNodeCategory(
+          nodeId: node['id'] as String,
           categoryId: chosen.isEmpty ? null : chosen,
         ));
   }
@@ -629,7 +671,7 @@ class _RelationsPageState extends State<RelationsPage> {
             padding: const EdgeInsets.all(16),
             children: [
               const Text(
-                'Catégories de lien',
+                'Catégories',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -639,7 +681,7 @@ class _RelationsPageState extends State<RelationsPage> {
               const SizedBox(height: 4),
               const Text(
                 'Une couleur par sorte de relation. Elle se pose ensuite sur '
-                'un lien, depuis la fiche d\'un rond.',
+                'un rond ou sur un lien, depuis la fiche du rond.',
                 style: TextStyle(color: Colors.white54, fontSize: 12),
               ),
               const SizedBox(height: 8),
@@ -739,13 +781,15 @@ class _RelationsPageState extends State<RelationsPage> {
       (link) => link['from_node_id'] == nodeId || link['to_node_id'] == nodeId,
     );
 
+    final category = _categoryById(node['category_id'] as String?);
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Row(
           children: [
             Icon(_kindIcons[node['kind']] ?? Icons.circle_outlined,
-                color: _primaryColor),
+                color: _nodeColor(node, _primaryColor)),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -765,11 +809,17 @@ class _RelationsPageState extends State<RelationsPage> {
                   final draft = await _askNode(existing: node);
                   if (draft == null || !mounted) return;
                   final auth = context.read<AuthProvider>();
-                  await _mutate(() => auth.updateRelationNode(
-                        nodeId: nodeId,
-                        label: draft.label,
-                        kind: draft.kind,
-                      ));
+                  await _mutate(() async {
+                    await auth.updateRelationNode(
+                      nodeId: nodeId,
+                      label: draft.label,
+                      kind: draft.kind,
+                    );
+                    await auth.setRelationNodeCategory(
+                      nodeId: nodeId,
+                      categoryId: draft.categoryId,
+                    );
+                  });
                   await refresh();
                 },
               ),
@@ -792,9 +842,28 @@ class _RelationsPageState extends State<RelationsPage> {
             ],
           ],
         ),
-        Text(
-          _kindLabels[node['kind']] ?? '',
-          style: const TextStyle(color: Colors.white38, fontSize: 12),
+        Row(
+          children: [
+            Text(
+              _kindLabels[node['kind']] ?? '',
+              style: const TextStyle(color: Colors.white38, fontSize: 12),
+            ),
+            // La catégorie du rond, écrite en toutes lettres : sur la carte,
+            // elle n'est qu'une couleur.
+            if (category != null) ...[
+              const Text(' · ',
+                  style: TextStyle(color: Colors.white24, fontSize: 12)),
+              CircleAvatar(
+                radius: 5,
+                backgroundColor: Color((category['color'] as num).toInt()),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                category['name'] as String? ?? '',
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+            ],
+          ],
         ),
         // Les actions du MJ sont en tête : enfouies sous les informations,
         // elles restaient introuvables.
@@ -824,6 +893,20 @@ class _RelationsPageState extends State<RelationsPage> {
                 ),
                 onPressed: () async {
                   await _linkFrom(nodeId);
+                  await refresh();
+                },
+              ),
+              // Le rond est l'endroit où l'on cherche sa catégorie ; la
+              // légende, elle, ne fait qu'éclairer une couleur.
+              OutlinedButton.icon(
+                icon: const Icon(Icons.palette_outlined, size: 18),
+                label: const Text('Catégorie'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white70,
+                  side: const BorderSide(color: Colors.white24),
+                ),
+                onPressed: () async {
+                  await _changeNodeCategory(node);
                   await refresh();
                 },
               ),
@@ -998,6 +1081,16 @@ class _RelationsPageState extends State<RelationsPage> {
     return null;
   }
 
+  /// Couleur d'un rond : celle de sa catégorie, à défaut [fallback].
+  ///
+  /// Ranger un rond dans une catégorie ne lui fait pas perdre le signal des
+  /// découvertes : celui-ci reste porté par la pastille de comptage.
+  Color _nodeColor(Map<String, dynamic> node, Color fallback) {
+    final category = _categoryById(node['category_id'] as String?);
+    if (category == null) return fallback;
+    return Color((category['color'] as num).toInt());
+  }
+
   // ---------- Carte ----------
 
   @override
@@ -1011,7 +1104,7 @@ class _RelationsPageState extends State<RelationsPage> {
           if (_isMj)
             IconButton(
               icon: const Icon(Icons.palette_outlined),
-              tooltip: 'Catégories de lien',
+              tooltip: 'Catégories',
               onPressed: _manageCategories,
             ),
           if (_graph != null)
@@ -1129,59 +1222,73 @@ class _RelationsPageState extends State<RelationsPage> {
     final discovered = (node['discovered_count'] as num?)?.toInt() ?? 0;
     final remaining = total - discovered;
 
+    // Deux informations, deux endroits : la catégorie habille le rond, l'état
+    // des découvertes reste sur la pastille. Sans quoi, colorer un rond ferait
+    // disparaître le « il reste des ??? ».
+    final discoveryColor = remaining > 0 ? _unknownColor : _primaryColor;
+    final color = _nodeColor(node, discoveryColor);
+    final category = _categoryById(node['category_id'] as String?);
+
+    // Comme pour les liens : la catégorie mise en avant depuis la légende
+    // éclaire, les autres s'effacent. C'est un filtre du regard.
+    final dimmed = _filter != null && node['category_id'] != _filter;
+
     final circle = Container(
       width: _nodeRadius * 2,
       height: _nodeRadius * 2,
       decoration: BoxDecoration(
-        color: _cardColor,
+        // Un fond teinté : la couleur se lit sans avoir à viser le contour.
+        color: Color.alphaBlend(color.withValues(alpha: 0.18), _cardColor),
         shape: BoxShape.circle,
-        border: Border.all(
-          color: remaining > 0 ? _unknownColor : _primaryColor,
-          width: 2,
-        ),
+        border: Border.all(color: color, width: 2),
       ),
       child: Icon(
         _kindIcons[node['kind']] ?? Icons.circle_outlined,
-        color: remaining > 0 ? _unknownColor : _primaryColor,
+        color: color,
       ),
     );
 
     return Positioned(
       left: position.dx - _nodeRadius,
       top: position.dy - _nodeRadius,
-      child: GestureDetector(
-        onTap: () => _openNode(id),
-        onPanUpdate: _isMj ? (details) => _onNodeDrag(id, details.delta) : null,
-        onPanEnd: _isMj ? (_) => _onNodeDropped(id) : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Semantics(
-              container: true,
-              button: true,
-              label: '${node['label']}, $discovered information'
-                  '${discovered > 1 ? 's' : ''} sur $total',
-              excludeSemantics: true,
-              child: Badge(
-                isLabelVisible: total > 0,
-                label: Text('$discovered/$total'),
-                backgroundColor: remaining > 0 ? _unknownColor : _primaryColor,
-                textColor: _bgColor,
-                child: circle,
+      child: Opacity(
+        opacity: dimmed ? 0.3 : 1,
+        child: GestureDetector(
+          onTap: () => _openNode(id),
+          onPanUpdate:
+              _isMj ? (details) => _onNodeDrag(id, details.delta) : null,
+          onPanEnd: _isMj ? (_) => _onNodeDropped(id) : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Semantics(
+                container: true,
+                button: true,
+                label: '${node['label']}, $discovered information'
+                    '${discovered > 1 ? 's' : ''} sur $total'
+                    '${category == null ? '' : ', ${category['name']}'}',
+                excludeSemantics: true,
+                child: Badge(
+                  isLabelVisible: total > 0,
+                  label: Text('$discovered/$total'),
+                  backgroundColor: discoveryColor,
+                  textColor: _bgColor,
+                  child: circle,
+                ),
               ),
-            ),
-            SizedBox(
-              width: _nodeRadius * 3,
-              height: _nodeLabelHeight,
-              child: Text(
-                node['label'] as String? ?? '',
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 12),
+              SizedBox(
+                width: _nodeRadius * 3,
+                height: _nodeLabelHeight,
+                child: Text(
+                  node['label'] as String? ?? '',
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1235,32 +1342,52 @@ class _RelationsPageState extends State<RelationsPage> {
     );
   }
 
+  /// La légende, annoncée pour ce qu'elle est : un filtre du regard.
+  ///
+  /// Sans son intitulé, on la prend pour un moyen d'attribuer une couleur, et
+  /// la voir agir sur toute la carte donne l'impression de tout modifier.
+  /// L'attribution, elle, se fait depuis la fiche d'un rond.
   Widget _buildLegend() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       color: _cardColor,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final category in _categories)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(category['name'] as String? ?? ''),
-                  avatar: CircleAvatar(
-                    radius: 8,
-                    backgroundColor: Color((category['color'] as num).toInt()),
-                  ),
-                  selected: _filter == category['id'],
-                  onSelected: (selected) => setState(
-                    () => _filter = selected ? category['id'] as String : null,
-                  ),
-                ),
+      child: Row(
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: Text(
+              'Mettre en avant',
+              style: TextStyle(color: Colors.white38, fontSize: 12),
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final category in _categories)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(category['name'] as String? ?? ''),
+                        avatar: CircleAvatar(
+                          radius: 8,
+                          backgroundColor:
+                              Color((category['color'] as num).toInt()),
+                        ),
+                        selected: _filter == category['id'],
+                        onSelected: (selected) => setState(
+                          () => _filter =
+                              selected ? category['id'] as String : null,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1271,7 +1398,11 @@ class _NodeDraft {
   final String label;
   final String kind;
 
-  const _NodeDraft(this.label, this.kind);
+  /// Catégorie choisie, ou `null` pour aucune. C'est elle qui donnera sa
+  /// couleur au rond sur la carte.
+  final String? categoryId;
+
+  const _NodeDraft(this.label, this.kind, this.categoryId);
 }
 
 /// Boîte de création ou de renommage d'un rond.
@@ -1282,7 +1413,10 @@ class _NodeDraft {
 class _NodeDialog extends StatefulWidget {
   final Map<String, dynamic>? existing;
 
-  const _NodeDialog({this.existing});
+  /// Les catégories de la room, pour ranger le rond dès sa création.
+  final List<Map<String, dynamic>> categories;
+
+  const _NodeDialog({this.existing, required this.categories});
 
   @override
   State<_NodeDialog> createState() => _NodeDialogState();
@@ -1291,6 +1425,7 @@ class _NodeDialog extends StatefulWidget {
 class _NodeDialogState extends State<_NodeDialog> {
   late final TextEditingController _controller;
   late String _kind;
+  late String? _categoryId;
 
   @override
   void initState() {
@@ -1299,6 +1434,7 @@ class _NodeDialogState extends State<_NodeDialog> {
       text: widget.existing?['label'] as String? ?? '',
     );
     _kind = widget.existing?['kind'] as String? ?? 'person';
+    _categoryId = widget.existing?['category_id'] as String?;
   }
 
   @override
@@ -1338,6 +1474,40 @@ class _NodeDialogState extends State<_NodeDialog> {
                   ),
               ],
             ),
+            // La catégorie se choisit ici plutôt qu'après coup : c'est le
+            // moment où l'on sait à quelle famille ce rond appartient.
+            if (widget.categories.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Catégorie',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final category in widget.categories)
+                    ChoiceChip(
+                      label: Text(category['name'] as String? ?? ''),
+                      avatar: CircleAvatar(
+                        radius: 8,
+                        backgroundColor:
+                            Color((category['color'] as num).toInt()),
+                      ),
+                      selected: _categoryId == category['id'],
+                      // Retoucher la puce choisie la retire : c'est ainsi que
+                      // l'on remet un rond sans catégorie.
+                      onSelected: (selected) => setState(
+                        () => _categoryId =
+                            selected ? category['id'] as String : null,
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -1350,7 +1520,7 @@ class _NodeDialogState extends State<_NodeDialog> {
           onPressed: () {
             final label = _controller.text.trim();
             if (label.isEmpty) return;
-            Navigator.pop(context, _NodeDraft(label, _kind));
+            Navigator.pop(context, _NodeDraft(label, _kind, _categoryId));
           },
           child: const Text('Valider'),
         ),
