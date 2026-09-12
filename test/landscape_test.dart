@@ -361,6 +361,27 @@ void _stubRichData(MockSupabaseService service) {
       _event('event-3', 2, title: 'Le pacte'),
     ],
   );
+  // Un chat vide tient toujours : un message long et un chuchotement du MJ.
+  when(() => service.getRoomMessages(kRoomId)).thenAnswer(
+    (_) async => [
+      {
+        "id": "message-1",
+        "campaign_id": kRoomId,
+        "author_id": kPlayerId,
+        "body": _longText,
+        "visible_to": null,
+        "created_at": "2026-09-11T10:00:00Z",
+      },
+      {
+        "id": "message-2",
+        "campaign_id": kRoomId,
+        "author_id": kMjId,
+        "body": "Le garde ment. Ne le laissez pas quitter la salle.",
+        "visible_to": [kPlayerId],
+        "created_at": "2026-09-11T10:01:00Z",
+      },
+    ],
+  );
   when(() => service.getDiceRolls(kRoomId, limit: any(named: 'limit')))
       .thenAnswer(
     (_) async => [for (var i = 0; i < 6; i++) _roll('roll-$i', secret: i == 2)],

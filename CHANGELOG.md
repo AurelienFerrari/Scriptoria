@@ -6,6 +6,23 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté
+- Chat de la room, enregistré et partagé en temps réel : un message apparaît
+  chez tous les membres sans rafraîchir. Il ne vivait jusqu'ici qu'en mémoire,
+  sur le téléphone de celui qui l'écrivait
+- Chuchotements du MJ : il peut adresser un message à des joueurs choisis. La
+  règle est portée par la RLS, que Realtime applique à chaque abonné — un
+  joueur non destinataire ne reçoit le message ni par requête, ni en direct
+- Modération du chat : chacun supprime ses propres messages, le MJ ceux de
+  toute la table
+- Le journal des dés se met à jour en temps réel : un jet apparaît chez toute
+  la table sans tirer l'écran
+
+### Corrigé
+- Le chat affichait trois messages codés en dur (« Bienvenue dans le chat ! »,
+  « Nouveau message test », « Salut à tous ! ») et ne conservait rien de ce qui
+  s'y écrivait — bogue B29
+
 ## [0.11.0] - 2026-09-11
 
 ### Ajouté
