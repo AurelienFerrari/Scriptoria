@@ -20,6 +20,10 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   la fiche du rond ou dès sa création : une même couleur réunit alors une
   famille ou un camp d'un coup d'œil. Colorer un rond ne fait pas perdre le
   signal des découvertes, que la pastille de comptage continue de porter
+- La mise en avant éclaire le fil entier : les ronds pris dans la catégorie
+  par leurs liens s'allument et en prennent la couleur, et pas seulement ceux
+  qui la portent en propre. Auparavant seuls les traits s'éclairaient, entre
+  des ronds restés éteints
 - La légende met une catégorie en avant et estompe les autres, ronds compris.
   Elle est annoncée comme telle — « Mettre en avant » — parce qu'on la prenait
   pour un moyen d'attribuer une couleur, et que la voir agir sur toute la carte
@@ -33,6 +37,11 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   longue est repliée à une ligne, dépliable par « Voir plus » — le même repli
   que sur le fil et la frise. Rien ne borne la longueur d'une information, et
   une seule un peu longue rendait la fiche impossible à parcourir
+- Une information s'écrit sur plusieurs paragraphes, dans un champ à hauteur
+  réservée qui défile en lui-même et où Entrée passe à la ligne. Le champ
+  était plafonné à quatre lignes et enfermé dans une boîte défilante : faire
+  glisser le texte déplaçait la boîte, et la fin d'une information déjà
+  longue restait inatteignable — on pouvait l'écrire, pas la reprendre
 - Le MJ peut corriger une information déjà écrite, et pas seulement l'ajouter
   ou la supprimer. Le texte part tel quel dans le champ, et ce qui a déjà été
   découvert le reste — corriger n'est pas re-cacher

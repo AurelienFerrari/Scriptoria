@@ -367,7 +367,7 @@ class _RelationsPageState extends State<RelationsPage> {
       title: 'Nouvelle information',
       label: 'Information',
       hint: 'Ce que l\'on peut apprendre ici…',
-      maxLines: 4,
+      multiline: true,
     );
     if (content == null || !mounted) return;
 
@@ -395,7 +395,7 @@ class _RelationsPageState extends State<RelationsPage> {
       label: 'Information',
       initial: fact['content'] as String?,
       hint: 'Ce que l\'on peut apprendre ici…',
-      maxLines: 4,
+      multiline: true,
     );
     if (content == null || !mounted) return;
 
@@ -411,7 +411,7 @@ class _RelationsPageState extends State<RelationsPage> {
     required String label,
     String? initial,
     String? hint,
-    int maxLines = 1,
+    bool multiline = false,
   }) {
     return showDialog<String>(
       context: context,
@@ -420,7 +420,7 @@ class _RelationsPageState extends State<RelationsPage> {
         label: label,
         initial: initial,
         hint: hint,
-        maxLines: maxLines,
+        multiline: multiline,
       ),
     );
   }
@@ -1238,6 +1238,32 @@ class _RelationsPageState extends State<RelationsPage> {
     return Color((category['color'] as num).toInt());
   }
 
+  Color _categoryColor(String id) {
+    final category = _categoryById(id);
+    if (category == null) return _primaryColor;
+    return Color((category['color'] as num).toInt());
+  }
+
+  /// Un rond fait-il partie de la catégorie mise en avant ?
+  ///
+  /// Sa propre catégorie compte, mais aussi les liens de cette couleur qui
+  /// aboutissent à lui : mettre « conflit » en avant doit allumer le fil
+  /// entier. Sans cela, seuls les traits s'éclairaient, entre des ronds restés
+  /// éteints — et la plupart des ronds tiennent leur appartenance de leurs
+  /// liens, pas d'une catégorie posée en propre.
+  bool _matchesFilter(Map<String, dynamic> node) {
+    final filter = _filter;
+    if (filter == null) return true;
+    if (node['category_id'] == filter) return true;
+
+    final id = node['id'];
+    for (final link in _links) {
+      if (link['category_id'] != filter) continue;
+      if (link['from_node_id'] == id || link['to_node_id'] == id) return true;
+    }
+    return false;
+  }
+
   // ---------- Carte ----------
 
   @override
@@ -1373,13 +1399,21 @@ class _RelationsPageState extends State<RelationsPage> {
     // des découvertes reste sur la pastille. Sans quoi, colorer un rond ferait
     // disparaître le « il reste des ??? ».
     final discoveryColor = remaining > 0 ? _unknownColor : _primaryColor;
-    final color = _nodeColor(node, discoveryColor);
+    final filter = _filter;
+    final inFilter = _matchesFilter(node);
+
+    // Sa catégorie d'abord ; sinon celle mise en avant, quand ce rond en fait
+    // partie par ses liens ; à défaut, l'état des découvertes.
+    final color = _nodeColor(
+      node,
+      filter != null && inFilter ? _categoryColor(filter) : discoveryColor,
+    );
     final category = _categoryById(node['category_id'] as String?);
     final imageUrl = node['image_url'] as String?;
 
     // Comme pour les liens : la catégorie mise en avant depuis la légende
     // éclaire, les autres s'effacent. C'est un filtre du regard.
-    final dimmed = _filter != null && node['category_id'] != _filter;
+    final dimmed = !inFilter;
 
     final circle = Container(
       width: _nodeRadius * 2,
@@ -1697,14 +1731,16 @@ class _TextPromptDialog extends StatefulWidget {
   final String label;
   final String? initial;
   final String? hint;
-  final int maxLines;
+
+  /// Saisie d'un texte long, sur plusieurs paragraphes.
+  final bool multiline;
 
   const _TextPromptDialog({
     required this.title,
     required this.label,
     required this.initial,
     required this.hint,
-    required this.maxLines,
+    required this.multiline,
   });
 
   @override
@@ -1734,12 +1770,31 @@ class _TextPromptDialogState extends State<_TextPromptDialog> {
         widget.title,
         style: const TextStyle(color: Colors.white),
       ),
-      content: SingleChildScrollView(
+      content: SizedBox(
+        width: double.maxFinite,
+        // Une hauteur réservée pour la saisie longue : le champ défile alors
+        // en lui-même. Enfermé dans un SingleChildScrollView, c'était
+        // l'inverse — faire glisser le texte déplaçait la boîte, et la fin
+        // d'une information déjà écrite restait inatteignable. Bornée à une
+        // fraction de l'écran, pour tenir aussi en paysage.
+        height: widget.multiline
+            ? math.min(200, MediaQuery.sizeOf(context).height * 0.3)
+            : null,
         child: TextField(
           controller: _controller,
           autofocus: true,
-          minLines: 1,
-          maxLines: widget.maxLines,
+          // `expands` exige les deux à null, et donne au champ toute la
+          // hauteur qu'on vient de lui réserver.
+          minLines: widget.multiline ? null : 1,
+          maxLines: widget.multiline ? null : 1,
+          expands: widget.multiline,
+          textAlignVertical: TextAlignVertical.top,
+          keyboardType:
+              widget.multiline ? TextInputType.multiline : TextInputType.text,
+          // Entrée passe à la ligne au lieu de valider : une information tient
+          // souvent en plusieurs paragraphes.
+          textInputAction:
+              widget.multiline ? TextInputAction.newline : TextInputAction.done,
           style: const TextStyle(color: Colors.white),
           decoration: _dialogField(widget.label, hint: widget.hint),
         ),

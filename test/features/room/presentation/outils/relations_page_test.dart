@@ -407,6 +407,65 @@ void main() {
           )).called(1);
     });
 
+    testWidgets('écrit une information sur plusieurs paragraphes',
+        (tester) async {
+      await pumpMap(tester, _graph(isMj: true, nodes: [_node()]), asMj: true);
+
+      await tester.tap(find.text('Le baron'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Information'));
+      await tester.pumpAndSettle();
+
+      // Une vraie surface de saisie, qui défile en elle-même : plafonné à
+      // quatre lignes dans une boîte défilante, on ne pouvait pas atteindre
+      // la fin d'un texte déjà long.
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.expands, isTrue);
+      expect(field.maxLines, isNull);
+      // Entrée passe à la ligne au lieu de valider.
+      expect(field.textInputAction, TextInputAction.newline);
+
+      await tester.enterText(
+        find.byType(TextField),
+        'Premier paragraphe.\n\nSecond paragraphe.',
+      );
+      await tester.tap(find.widgetWithText(TextButton, 'Valider'));
+      await tester.pumpAndSettle();
+
+      verify(() => service.createRelationFact(
+            campaignId: kRoomId,
+            nodeId: 'node-1',
+            content: 'Premier paragraphe.\n\nSecond paragraphe.',
+            position: 0,
+          )).called(1);
+    });
+
+    testWidgets('rouvre une information longue en entier pour la corriger',
+        (tester) async {
+      const long = 'Le baron a vendu la carte aux contrebandiers du port.\n\n'
+          'Il a ensuite fait disparaître les témoins un à un, et plus '
+          'personne dans la cité n\'ose prononcer son nom à voix haute.';
+
+      await pumpMap(
+        tester,
+        _graph(isMj: true, nodes: [
+          _node(facts: [_fact(content: long)]),
+        ]),
+        asMj: true,
+      );
+
+      await tester.tap(find.text('Le baron'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Modifier cette information'));
+      await tester.pumpAndSettle();
+
+      // Le texte entier, retours à la ligne compris, dans un champ qu'on peut
+      // parcourir.
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.controller?.text, long);
+      expect(field.expands, isTrue);
+    });
+
     testWidgets('retire l\'image d\'un rond', (tester) async {
       await pumpMap(
         tester,
@@ -691,6 +750,52 @@ void main() {
     // l'ambre qui dit qu'une information reste à découvrir ici.
     final badge = tester.widget<Badge>(find.byType(Badge));
     expect(badge.backgroundColor, const Color(0xFFE3C77B));
+  });
+
+  testWidgets('la mise en avant éclaire les ronds du fil, pas que les traits',
+      (tester) async {
+    await pumpMap(
+      tester,
+      _graph(
+        nodes: [
+          _node(),
+          _node(id: 'node-2', label: 'La citadelle', kind: 'place', x: 700),
+          _node(id: 'node-3', label: 'Le port', kind: 'event', x: 1000),
+        ],
+        links: [_link(categoryId: 'cat-1')],
+        categories: [_category()],
+      ),
+    );
+
+    double opacityOf(String label) => tester
+        .widget<Opacity>(
+          find
+              .ancestor(of: find.text(label), matching: find.byType(Opacity))
+              .first,
+        )
+        .opacity;
+
+    await tester.tap(find.widgetWithText(FilterChip, 'Conflit'));
+    await tester.pumpAndSettle();
+
+    // Les deux ronds que relie le lien « Conflit » restent nets ; celui qui
+    // n'y participe pas s'efface.
+    expect(opacityOf('Le baron'), 1);
+    expect(opacityOf('La citadelle'), 1);
+    expect(opacityOf('Le port'), lessThan(1));
+
+    // Et ils en prennent la couleur, sans porter la catégorie en propre :
+    // sinon seuls les traits s'allumaient, entre des ronds restés éteints.
+    final circle = tester.widget<Container>(
+      find
+          .ancestor(
+            of: find.byIcon(Icons.person_outline),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    final border = (circle.decoration as BoxDecoration).border as Border;
+    expect(border.top.color, const Color(0xFFE37B7B));
   });
 
   testWidgets('la légende met une catégorie en avant', (tester) async {
