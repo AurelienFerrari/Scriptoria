@@ -800,15 +800,71 @@ class SupabaseService {
     }
   }
 
+  // ============ SONDAGES ============
+
+  /// Crée un sondage et son message d'un seul tenant, par la fonction
+  /// `create_room_poll`. Renvoie le message, comme un envoi ordinaire.
+  Future<Map<String, dynamic>> createRoomPoll({
+    required String campaignId,
+    required String question,
+    required List<String> options,
+    required bool multiple,
+  }) async {
+    final message = await _client.rpc('create_room_poll', params: {
+      'p_campaign_id': campaignId,
+      'p_question': question,
+      'p_options': options,
+      'p_multiple': multiple,
+    });
+    return Map<String, dynamic>.from(message as Map);
+  }
+
+  /// Sondages portés par les messages [messageIds], avec leurs réponses.
+  ///
+  /// Les compteurs viennent de la fonction `get_room_polls`, qui ne renvoie
+  /// que des totaux, et seulement à qui a voté ou une fois le sondage clos.
+  Future<List<Map<String, dynamic>>> getRoomPolls(
+    List<String> messageIds,
+  ) async {
+    if (messageIds.isEmpty) return [];
+    try {
+      final result = await _client.rpc(
+        'get_room_polls',
+        params: {'p_message_ids': messageIds},
+      );
+      return (result as List)
+          .map((poll) => Map<String, dynamic>.from(poll as Map))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Remplace le vote de l'utilisateur : voter à nouveau, c'est changer d'avis.
+  Future<void> voteRoomPoll({
+    required String pollId,
+    required List<String> optionIds,
+  }) async {
+    await _client.rpc('vote_room_poll', params: {
+      'p_poll_id': pollId,
+      'p_option_ids': optionIds,
+    });
+  }
+
+  /// Fige un sondage : réservé à son auteur et au MJ, par la base.
+  Future<void> closeRoomPoll(String pollId) async {
+    await _client.rpc('close_room_poll', params: {'p_poll_id': pollId});
+  }
+
   // ============ TEMPS RÉEL ============
 
-  /// Insertions et suppressions sur [table] pour la room [campaignId], en
-  /// temps réel.
+  /// Insertions, modifications et suppressions sur [table] pour la room
+  /// [campaignId], en temps réel.
   ///
   /// Le canal ne s'ouvre qu'à la première écoute et se referme quand elle
   /// s'arrête : un écran qui disparaît ne laisse pas d'abonnement ouvert.
   ///
-  /// Les insertions sont filtrées sur la room, et la RLS s'y applique : chacun
+  /// Les insertions et les modifications sont filtrées sur la room, et la RLS s'y applique : chacun
   /// ne reçoit que les lignes qu'il a le droit de lire. Les suppressions, elles,
   /// ne peuvent pas être filtrées : l'événement ne porte que l'`id` de la ligne
   /// (voir la migration `room_messages_realtime`). Un écran reçoit donc aussi
@@ -840,6 +896,18 @@ class SupabaseService {
               ),
               callback: (payload) =>
                   emit(RowChange(RowChangeKind.inserted, payload.newRecord)),
+            )
+            .onPostgresChanges(
+              event: PostgresChangeEvent.update,
+              schema: 'public',
+              table: table,
+              filter: PostgresChangeFilter(
+                type: PostgresChangeFilterType.eq,
+                column: 'campaign_id',
+                value: campaignId,
+              ),
+              callback: (payload) =>
+                  emit(RowChange(RowChangeKind.updated, payload.newRecord)),
             )
             .onPostgresChanges(
               event: PostgresChangeEvent.delete,

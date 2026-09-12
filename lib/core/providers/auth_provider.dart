@@ -307,6 +307,35 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.deleteRoomMessage(messageId);
   }
 
+  Future<Map<String, dynamic>> createRoomPoll({
+    required String campaignId,
+    required String question,
+    required List<String> options,
+    required bool multiple,
+  }) {
+    return _supabaseService.createRoomPoll(
+      campaignId: campaignId,
+      question: question,
+      options: options,
+      multiple: multiple,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getRoomPolls(List<String> messageIds) {
+    return _supabaseService.getRoomPolls(messageIds);
+  }
+
+  Future<void> voteRoomPoll({
+    required String pollId,
+    required List<String> optionIds,
+  }) {
+    return _supabaseService.voteRoomPoll(pollId: pollId, optionIds: optionIds);
+  }
+
+  Future<void> closeRoomPoll(String pollId) {
+    return _supabaseService.closeRoomPoll(pollId);
+  }
+
   /// Changements en temps réel sur une table de la room : voir
   /// [SupabaseService.watchRoomTable].
   Stream<RowChange> watchRoomTable(String table, String campaignId) {

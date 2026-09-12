@@ -11,6 +11,9 @@ import '../../../core/services/row_change.dart';
 import '../../../core/utils/format_relative_age.dart';
 import '../../../core/utils/friendly_error.dart';
 import 'audience_dialog.dart';
+import 'room_poll_card.dart';
+import 'room_poll_composer_page.dart';
+import 'room_route.dart';
 
 const Color _bgColor = Color(0xFF161622);
 const Color _cardColor = Color(0xFF232336);
@@ -29,8 +32,9 @@ const int _maxLength = 2000;
 /// rien n'était enregistré, ni partagé.
 ///
 /// Ce que chacun y lit est décidé par la base. Un chuchotement du MJ ne
-/// remonte, par requête comme par le temps réel, qu'à ses destinataires : cet
-/// écran ne filtre rien lui-même.
+/// remonte, par requête comme par le temps réel, qu'à ses destinataires, et
+/// les compteurs d'un sondage ne remontent qu'à qui a voté : cet écran ne
+/// filtre rien lui-même.
 class RoomChatPage extends StatefulWidget {
   const RoomChatPage({Key? key}) : super(key: key);
 
@@ -47,6 +51,9 @@ class _RoomChatPageState extends State<RoomChatPage> {
   /// Annuaire de la room, pour nommer auteurs et destinataires.
   Map<String, Map<String, dynamic>> _membersById = const {};
 
+  /// Sondages de la conversation, rangés par id de leur message.
+  Map<String, Map<String, dynamic>> _polls = const {};
+
   /// Destinataires du prochain message : `null` pour toute la table.
   ///
   /// Le choix reste en place d'un message à l'autre : un échange secret tient
@@ -59,24 +66,33 @@ class _RoomChatPageState extends State<RoomChatPage> {
   bool _isLoading = true;
   bool _isSending = false;
   StreamSubscription<RowChange>? _changes;
+  StreamSubscription<RowChange>? _pollChanges;
 
   @override
   void initState() {
     super.initState();
     _load();
-    final room = context.read<RoomProvider>();
-    _changes = context
-        .read<AuthProvider>()
-        .watchRoomTable('room_messages', room.roomId)
-        .listen(_onChange);
+    final auth = context.read<AuthProvider>();
+    final roomId = context.read<RoomProvider>().roomId;
+    _changes = auth.watchRoomTable('room_messages', roomId).listen(_onChange);
+    // Chaque vote touche le sondage : c'est ce signal, et non les votes
+    // eux-mêmes, qui rafraîchit les résultats chez toute la table.
+    _pollChanges =
+        auth.watchRoomTable('room_polls', roomId).listen(_onPollChange);
   }
 
   @override
   void dispose() {
     _changes?.cancel();
+    _pollChanges?.cancel();
     _controller.dispose();
     super.dispose();
   }
+
+  List<String> _pollIdsOf(List<Map<String, dynamic>> messages) => [
+        for (final message in messages)
+          if (message['kind'] == 'poll') message['id'] as String,
+      ];
 
   Future<void> _load() async {
     final auth = context.read<AuthProvider>();
@@ -85,13 +101,33 @@ class _RoomChatPageState extends State<RoomChatPage> {
       auth.getRoomMessages(roomId),
       auth.getCampaignMembers(roomId),
     ]);
+    final messages = results[0];
+    final pollIds = _pollIdsOf(messages);
+    final polls = pollIds.isEmpty
+        ? const <Map<String, dynamic>>[]
+        : await auth.getRoomPolls(pollIds);
     if (!mounted) return;
     setState(() {
-      _messages = results[0];
+      _messages = messages;
       _membersById = {
         for (final member in results[1]) member['user_id'] as String: member,
       };
+      _polls = {
+        for (final poll in polls) poll['message_id'] as String: poll,
+      };
       _isLoading = false;
+    });
+  }
+
+  Future<void> _refreshPolls(List<String> messageIds) async {
+    if (messageIds.isEmpty) return;
+    final polls = await context.read<AuthProvider>().getRoomPolls(messageIds);
+    if (!mounted) return;
+    setState(() {
+      _polls = {
+        ..._polls,
+        for (final poll in polls) poll['message_id'] as String: poll,
+      };
     });
   }
 
@@ -99,11 +135,31 @@ class _RoomChatPageState extends State<RoomChatPage> {
     switch (change.kind) {
       case RowChangeKind.inserted:
         _append(change.record);
+      case RowChangeKind.updated:
+        // Un message ne se modifie pas, sauf par la base elle-même : quand
+        // l'original d'une réponse est supprimé, sa citation passe à `null`.
+        _replace(change.record);
       case RowChangeKind.deleted:
         _remove(change.record['id']);
       case RowChangeKind.resubscribed:
         // Realtime ne rejoue pas ce qui s'est dit pendant une coupure.
         _load();
+    }
+  }
+
+  void _onPollChange(RowChange change) {
+    switch (change.kind) {
+      case RowChangeKind.inserted:
+      case RowChangeKind.updated:
+        final messageId = change.record['message_id'];
+        if (messageId is String && _messages.any((m) => m['id'] == messageId)) {
+          _refreshPolls([messageId]);
+        }
+      case RowChangeKind.deleted:
+        // Un sondage part avec son message : la suppression de celui-ci suffit.
+        break;
+      case RowChangeKind.resubscribed:
+        _refreshPolls(_pollIdsOf(_messages));
     }
   }
 
@@ -115,9 +171,19 @@ class _RoomChatPageState extends State<RoomChatPage> {
       _messages = [..._messages, message];
     });
 
+    if (message['kind'] == 'poll') _refreshPolls([message['id'] as String]);
+
     // Un joueur arrivé depuis l'ouverture du chat n'est pas dans l'annuaire.
     final authorId = message['author_id'];
     if (authorId is String && !_membersById.containsKey(authorId)) _load();
+  }
+
+  void _replace(Map<String, dynamic> message) {
+    final index = _messages.indexWhere((m) => m['id'] == message['id']);
+    if (index < 0) return;
+    setState(() {
+      _messages = [..._messages]..[index] = message;
+    });
   }
 
   void _remove(Object? id) {
@@ -126,6 +192,7 @@ class _RoomChatPageState extends State<RoomChatPage> {
     if (!_messages.any((m) => m['id'] == id)) return;
     setState(() {
       _messages = _messages.where((m) => m['id'] != id).toList();
+      _polls = {..._polls}..remove(id);
       // On ne répond pas à un message qui n'existe plus.
       if (_replyTo?['id'] == id) _replyTo = null;
     });
@@ -155,8 +222,20 @@ class _RoomChatPageState extends State<RoomChatPage> {
 
   String _namesOf(List<String> ids) => ids.map(_nameOf).join(', ');
 
+  /// Texte d'un message tel qu'on le cite : un sondage est annoncé comme tel.
+  String _excerptOf(Map<String, dynamic> message) {
+    final body = message['body'] as String? ?? '';
+    return message['kind'] == 'poll' ? 'Sondage : $body' : body;
+  }
+
   void _startReply(Map<String, dynamic> message) {
     setState(() => _replyTo = message);
+  }
+
+  void _showError(Object error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(friendlyErrorMessage(error))),
+    );
   }
 
   Future<void> _send() async {
@@ -183,14 +262,72 @@ class _RoomChatPageState extends State<RoomChatPage> {
       _append(message);
     } catch (e) {
       // Le texte et la citation restent : un échec ne doit rien faire perdre.
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyErrorMessage(e))),
-        );
-      }
+      if (mounted) _showError(e);
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
+  }
+
+  Future<void> _createPoll() async {
+    final message = await pushRoomRoute<Map<String, dynamic>>(
+      context,
+      const RoomPollComposerPage(),
+    );
+    if (message != null && mounted) _append(message);
+  }
+
+  Future<bool> _vote(String messageId, List<String> optionIds) async {
+    final poll = _polls[messageId];
+    if (poll == null) return false;
+
+    final auth = context.read<AuthProvider>();
+    try {
+      await auth.voteRoomPoll(
+        pollId: poll['poll_id'] as String,
+        optionIds: optionIds,
+      );
+    } catch (e) {
+      if (mounted) _showError(e);
+      return false;
+    }
+    await _refreshPolls([messageId]);
+    return true;
+  }
+
+  Future<void> _closePoll(String messageId) async {
+    final poll = _polls[messageId];
+    if (poll == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clore le sondage ?'),
+        content: const Text(
+          'Les votes seront figés, et les résultats visibles par toute la '
+          'table.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Clore'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final auth = context.read<AuthProvider>();
+    try {
+      await auth.closeRoomPoll(poll['poll_id'] as String);
+    } catch (e) {
+      if (mounted) _showError(e);
+      return;
+    }
+    await _refreshPolls([messageId]);
   }
 
   Future<void> _chooseWhisper() async {
@@ -245,11 +382,7 @@ class _RoomChatPageState extends State<RoomChatPage> {
           .read<AuthProvider>()
           .deleteRoomMessage(message['id'] as String);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyErrorMessage(e))),
-        );
-      }
+      if (mounted) _showError(e);
       return;
     }
     if (mounted) _remove(message['id']);
@@ -317,9 +450,10 @@ class _RoomChatPageState extends State<RoomChatPage> {
     bool isMj,
     String? currentUserId,
   ) {
-    final id = message['id'] as String?;
+    final id = message['id'] as String;
     final authorId = message['author_id'] as String?;
     final isMine = authorId == currentUserId;
+    final isPoll = message['kind'] == 'poll';
     final visibleTo = (message['visible_to'] as List?)?.cast<String>();
     final body = message['body'] as String? ?? '';
 
@@ -334,6 +468,11 @@ class _RoomChatPageState extends State<RoomChatPage> {
           ? 'Chuchoté pour vous'
           : 'Chuchoté à ${_namesOf(visibleTo)}';
     }
+
+    // L'auteur retire ses messages, le MJ ceux de tout le monde — la même
+    // règle que la policy `room_messages_delete_author_or_mj`. L'auteur d'un
+    // sondage et le MJ peuvent aussi le clore.
+    final canModerate = isMine || isMj;
 
     final bubble = Container(
       constraints: const BoxConstraints(maxWidth: 480),
@@ -374,7 +513,20 @@ class _RoomChatPageState extends State<RoomChatPage> {
             ),
           if (quoted != null)
             _buildQuote(quoted, currentUserId, key: ValueKey('quote-$id')),
-          Text(body, style: const TextStyle(color: Colors.white, height: 1.35)),
+          if (isPoll)
+            RoomPollCard(
+              key: ValueKey('poll-$id'),
+              question: body,
+              poll: _polls[id],
+              canClose: canModerate,
+              onVote: (optionIds) => _vote(id, optionIds),
+              onClose: () => _closePoll(id),
+            )
+          else
+            Text(
+              body,
+              style: const TextStyle(color: Colors.white, height: 1.35),
+            ),
           const SizedBox(height: 2),
           Text(
             formatRelativeAge(message['created_at'] as String?),
@@ -383,10 +535,6 @@ class _RoomChatPageState extends State<RoomChatPage> {
         ],
       ),
     );
-
-    // L'auteur retire ses messages, le MJ ceux de tout le monde — la même
-    // règle que la policy `room_messages_delete_author_or_mj`.
-    final canDelete = isMine || isMj;
 
     return Dismissible(
       key: ValueKey('message-$id'),
@@ -412,10 +560,10 @@ class _RoomChatPageState extends State<RoomChatPage> {
           const CustomSemanticsAction(label: 'Répondre'): () =>
               _startReply(message),
         },
-        onLongPressHint: canDelete ? 'supprimer le message' : null,
+        onLongPressHint: canModerate ? 'supprimer le message' : null,
         child: Align(
           alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-          child: canDelete
+          child: canModerate
               ? GestureDetector(
                   onLongPress: () => _confirmAndDelete(message),
                   child: bubble,
@@ -457,7 +605,7 @@ class _RoomChatPageState extends State<RoomChatPage> {
             ),
           ),
           Text(
-            quoted['body'] as String? ?? '',
+            _excerptOf(quoted),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Colors.white60, fontSize: 12),
@@ -501,7 +649,7 @@ class _RoomChatPageState extends State<RoomChatPage> {
                   ),
                 ),
                 Text(
-                  target['body'] as String? ?? '',
+                  _excerptOf(target),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
@@ -560,6 +708,11 @@ class _RoomChatPageState extends State<RoomChatPage> {
               tooltip: 'Chuchoter à des joueurs',
               onPressed: _chooseWhisper,
             ),
+          IconButton(
+            icon: const Icon(Icons.poll_outlined, color: Colors.white54),
+            tooltip: 'Lancer un sondage',
+            onPressed: _createPoll,
+          ),
           Expanded(
             child: TextField(
               controller: _controller,

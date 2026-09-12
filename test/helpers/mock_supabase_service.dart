@@ -35,6 +35,7 @@ void stubRoomScreens(MockSupabaseService service) {
   when(() => service.getRoomNotes(any())).thenAnswer((_) async => []);
   when(() => service.getTimelineEvents(any())).thenAnswer((_) async => []);
   when(() => service.getRoomMessages(any())).thenAnswer((_) async => []);
+  when(() => service.getRoomPolls(any())).thenAnswer((_) async => []);
   // Aucun changement en temps réel : un test qui en veut fournit son propre
   // flux, qu'il pilote.
   when(() => service.watchRoomTable(any(), any()))
