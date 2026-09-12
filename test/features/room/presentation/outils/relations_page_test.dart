@@ -1,0 +1,394 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+
+import 'package:scriptoria/core/providers/auth_provider.dart';
+import 'package:scriptoria/core/services/row_change.dart';
+import 'package:scriptoria/features/room/presentation/outils/relations_page.dart';
+
+import '../../../../helpers/mock_supabase_service.dart';
+import '../../../../helpers/room_harness.dart';
+
+/// Une information telle que la renvoie `get_relation_graph`.
+///
+/// [content] vaut `null` quand la base refuse de la révéler : c'est ce qui
+/// fait apparaître « ??? » à l'écran.
+Map<String, dynamic> _fact({
+  String id = 'fact-1',
+  String? content,
+  List<String> discoveredBy = const [],
+}) =>
+    {
+      'id': id,
+      'position': 0,
+      'content': content,
+      'discovered_by': discoveredBy,
+    };
+
+Map<String, dynamic> _node({
+  String id = 'node-1',
+  String label = 'Le baron',
+  String kind = 'person',
+  double x = 400,
+  double y = 400,
+  List<Map<String, dynamic>> facts = const [],
+}) =>
+    {
+      'id': id,
+      'label': label,
+      'kind': kind,
+      'x': x,
+      'y': y,
+      'fact_count': facts.length,
+      'discovered_count':
+          facts.where((fact) => fact['content'] != null).length,
+      'facts': facts,
+    };
+
+Map<String, dynamic> _graph({
+  bool isMj = false,
+  List<Map<String, dynamic>> nodes = const [],
+  List<Map<String, dynamic>> links = const [],
+  List<Map<String, dynamic>> categories = const [],
+}) =>
+    {
+      'is_mj': isMj,
+      'nodes': nodes,
+      'links': links,
+      'categories': categories,
+    };
+
+void main() {
+  late MockSupabaseService service;
+  late AuthProvider auth;
+  late StreamController<RowChange> changes;
+
+  setUp(() {
+    service = MockSupabaseService();
+    auth = AuthProvider(supabaseService: service);
+    changes = StreamController<RowChange>.broadcast();
+
+    when(() => service.getCampaignMembers(kRoomId)).thenAnswer(
+      (_) async => [
+        testMember(userId: kMjId, role: 'mj', displayName: 'Aurélien'),
+        testMember(userId: kPlayerId, displayName: 'Camille'),
+      ],
+    );
+    when(() => service.watchRoomTable(any(), any()))
+        .thenAnswer((_) => changes.stream);
+    when(() => service.createRelationNode(
+          campaignId: any(named: 'campaignId'),
+          label: any(named: 'label'),
+          kind: any(named: 'kind'),
+          x: any(named: 'x'),
+          y: any(named: 'y'),
+        )).thenAnswer((_) async => _node());
+    when(() => service.updateRelationNode(
+          nodeId: any(named: 'nodeId'),
+          label: any(named: 'label'),
+          kind: any(named: 'kind'),
+          x: any(named: 'x'),
+          y: any(named: 'y'),
+        )).thenAnswer((_) async {});
+    when(() => service.createRelationFact(
+          campaignId: any(named: 'campaignId'),
+          nodeId: any(named: 'nodeId'),
+          content: any(named: 'content'),
+          position: any(named: 'position'),
+        )).thenAnswer((_) async {});
+    when(() => service.setFactDiscoverers(
+          factId: any(named: 'factId'),
+          userIds: any(named: 'userIds'),
+        )).thenAnswer((_) async {});
+    when(() => service.createRelationCategory(
+          campaignId: any(named: 'campaignId'),
+          name: any(named: 'name'),
+          color: any(named: 'color'),
+          position: any(named: 'position'),
+        )).thenAnswer((_) async => {'id': 'cat-1'});
+  });
+
+  tearDown(() => changes.close());
+
+  Future<void> pumpMap(
+    WidgetTester tester,
+    Map<String, dynamic> graph, {
+    bool asMj = false,
+  }) async {
+    when(() => service.getRelationGraph(kRoomId)).thenAnswer((_) async => graph);
+
+    final room = await loadedRoomProvider(
+      service: service,
+      auth: auth,
+      asUserId: asMj ? kMjId : kPlayerId,
+      role: asMj ? 'mj' : 'player',
+    );
+    await tester.pumpWidget(
+      wrapRoomScreen(auth: auth, room: room, child: const RelationsPage()),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  group('vue joueur', () {
+    testWidgets('affiche les ronds de la carte', (tester) async {
+      await pumpMap(
+        tester,
+        _graph(nodes: [
+          _node(),
+          _node(id: 'node-2', label: 'La citadelle', kind: 'place', x: 700),
+        ]),
+      );
+
+      expect(find.text('Le baron'), findsOneWidget);
+      expect(find.text('La citadelle'), findsOneWidget);
+    });
+
+    testWidgets('annonce une carte que le MJ n\'a pas encore dessinée',
+        (tester) async {
+      await pumpMap(tester, _graph());
+
+      expect(
+        find.textContaining('pas encore dessiné la carte'),
+        findsOneWidget,
+      );
+      // Le rond « + » est réservé au MJ.
+      expect(find.byTooltip('Ajouter un rond'), findsNothing);
+    });
+
+    testWidgets('masque ce qui n\'a pas été découvert', (tester) async {
+      await pumpMap(
+        tester,
+        _graph(nodes: [
+          _node(facts: [
+            _fact(content: 'Il a vendu la carte aux contrebandiers.'),
+            _fact(id: 'fact-2'),
+            _fact(id: 'fact-3'),
+          ]),
+        ]),
+      );
+
+      await tester.tap(find.text('Le baron'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Informations (1/3)'), findsOneWidget);
+      expect(
+        find.text('Il a vendu la carte aux contrebandiers.'),
+        findsOneWidget,
+      );
+      // Deux informations restent à trouver, et leur texte n'est jamais arrivé.
+      expect(find.text('???'), findsNWidgets(2));
+    });
+
+    testWidgets('ne donne au joueur aucun outil du MJ', (tester) async {
+      await pumpMap(
+        tester,
+        _graph(nodes: [
+          _node(facts: [_fact(content: 'Un secret déjà connu.')]),
+        ]),
+      );
+
+      await tester.tap(find.text('Le baron'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ajouter une information'), findsNothing);
+      expect(find.text('Relier à un autre rond'), findsNothing);
+      expect(find.byTooltip('Supprimer le rond'), findsNothing);
+      expect(find.byTooltip('Qui a découvert cette information'), findsNothing);
+    });
+  });
+
+  group('vue MJ', () {
+    testWidgets('ajoute un rond depuis le rond +', (tester) async {
+      await pumpMap(tester, _graph(isMj: true), asMj: true);
+
+      await tester.tap(find.byTooltip('Ajouter un rond'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nouveau rond'), findsOneWidget);
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Nom'),
+        'La citadelle',
+      );
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Lieu'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Valider'));
+      await tester.pumpAndSettle();
+
+      verify(() => service.createRelationNode(
+            campaignId: kRoomId,
+            label: 'La citadelle',
+            kind: 'place',
+            x: any(named: 'x'),
+            y: any(named: 'y'),
+          )).called(1);
+    });
+
+    testWidgets('voit le texte de toutes les informations', (tester) async {
+      await pumpMap(
+        tester,
+        _graph(isMj: true, nodes: [
+          _node(facts: [
+            _fact(content: 'Il a vendu la carte.', discoveredBy: [kPlayerId]),
+            _fact(id: 'fact-2', content: 'Sa fille est vivante.'),
+          ]),
+        ]),
+        asMj: true,
+      );
+
+      await tester.tap(find.text('Le baron'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Il a vendu la carte.'), findsOneWidget);
+      expect(find.text('Sa fille est vivante.'), findsOneWidget);
+      expect(find.text('???'), findsNothing);
+      // Le MJ sait à qui il a déjà révélé quoi.
+      expect(find.text('Découverte par 1 joueur'), findsOneWidget);
+      expect(find.text('Personne ne l\'a découverte'), findsOneWidget);
+    });
+
+    testWidgets('ajoute une information à un rond', (tester) async {
+      await pumpMap(
+        tester,
+        _graph(isMj: true, nodes: [
+          _node(facts: [_fact(content: 'Déjà écrite.')]),
+        ]),
+        asMj: true,
+      );
+
+      await tester.tap(find.text('Le baron'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ajouter une information'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Il ment sur son âge.');
+      await tester.tap(find.widgetWithText(TextButton, 'Valider'));
+      await tester.pumpAndSettle();
+
+      verify(() => service.createRelationFact(
+            campaignId: kRoomId,
+            nodeId: 'node-1',
+            content: 'Il ment sur son âge.',
+            // À la suite de celle qui existe déjà.
+            position: 1,
+          )).called(1);
+    });
+
+    testWidgets('désigne qui a découvert une information', (tester) async {
+      await pumpMap(
+        tester,
+        _graph(isMj: true, nodes: [
+          _node(facts: [_fact(content: 'Il a vendu la carte.')]),
+        ]),
+        asMj: true,
+      );
+
+      await tester.tap(find.text('Le baron'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Qui a découvert cette information'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Qui a découvert cette information ?'), findsOneWidget);
+      await tester.tap(find.text('Joueurs choisis'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Camille'));
+      await tester.tap(find.widgetWithText(TextButton, 'Valider'));
+      await tester.pumpAndSettle();
+
+      verify(() => service.setFactDiscoverers(
+            factId: 'fact-1',
+            userIds: [kPlayerId],
+          )).called(1);
+    });
+
+    testWidgets('enregistre la position d\'un rond déplacé', (tester) async {
+      await pumpMap(tester, _graph(isMj: true, nodes: [_node()]), asMj: true);
+
+      await tester.drag(find.text('Le baron'), const Offset(60, 40));
+      await tester.pumpAndSettle();
+
+      final moved = verify(() => service.updateRelationNode(
+            nodeId: 'node-1',
+            label: any(named: 'label'),
+            kind: any(named: 'kind'),
+            x: captureAny(named: 'x'),
+            y: captureAny(named: 'y'),
+          )).captured;
+
+      // Pas de valeur exacte attendue : le seuil de déclenchement du geste
+      // absorbe les premiers pixels du glissement. Ce qui compte, c'est que
+      // la nouvelle position parte en base.
+      expect(moved[0] as double, greaterThan(400));
+      expect(moved[1] as double, greaterThan(400));
+    });
+
+    testWidgets('crée une catégorie de lien', (tester) async {
+      await pumpMap(tester, _graph(isMj: true), asMj: true);
+
+      await tester.tap(find.byTooltip('Catégories de lien'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ajouter une catégorie'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Conflit');
+      await tester.tap(find.widgetWithText(TextButton, 'Valider'));
+      await tester.pumpAndSettle();
+
+      verify(() => service.createRelationCategory(
+            campaignId: kRoomId,
+            name: 'Conflit',
+            color: any(named: 'color'),
+            position: 0,
+          )).called(1);
+    });
+  });
+
+  testWidgets('la légende met une catégorie en avant', (tester) async {
+    await pumpMap(
+      tester,
+      _graph(
+        nodes: [_node(), _node(id: 'node-2', label: 'La citadelle', x: 700)],
+        links: [
+          {
+            'id': 'link-1',
+            'from_node_id': 'node-1',
+            'to_node_id': 'node-2',
+            'category_id': 'cat-1',
+            'label': null,
+          },
+        ],
+        categories: [
+          {'id': 'cat-1', 'name': 'Conflit', 'color': 0xFFE37B7B, 'position': 0},
+        ],
+      ),
+    );
+
+    expect(find.widgetWithText(FilterChip, 'Conflit'), findsOneWidget);
+    expect(
+      tester.widget<FilterChip>(find.byType(FilterChip)).selected,
+      isFalse,
+    );
+
+    await tester.tap(find.widgetWithText(FilterChip, 'Conflit'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<FilterChip>(find.byType(FilterChip)).selected,
+      isTrue,
+    );
+  });
+
+  testWidgets('recharge la carte quand le MJ y touche', (tester) async {
+    await pumpMap(tester, _graph(nodes: [_node()]));
+    clearInteractions(service);
+
+    // Révéler une information touche son rond : c'est ce signal qui circule.
+    changes.add(const RowChange(RowChangeKind.updated, {'id': 'node-1'}));
+    // Le rechargement attend que la rafale soit passée.
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    verify(() => service.getRelationGraph(kRoomId)).called(1);
+  });
+}

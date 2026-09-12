@@ -856,6 +856,151 @@ class SupabaseService {
     await _client.rpc('close_room_poll', params: {'p_poll_id': pollId});
   }
 
+  // ============ CARTE DES RELATIONS ============
+
+  /// Carte complète : légende, ronds, liens, et les informations que
+  /// l'utilisateur a le droit de lire.
+  ///
+  /// Tout passe par la fonction `get_relation_graph`, qui masque en base le
+  /// texte des informations non découvertes et n'en renvoie que le nombre.
+  /// Une erreur n'est pas avalée ici : ne pas être membre de la room doit se
+  /// voir à l'écran, et non se confondre avec une carte vide.
+  Future<Map<String, dynamic>> getRelationGraph(String campaignId) async {
+    final graph = await _client.rpc(
+      'get_relation_graph',
+      params: {'p_campaign_id': campaignId},
+    );
+    return Map<String, dynamic>.from(graph as Map);
+  }
+
+  Future<Map<String, dynamic>> createRelationNode({
+    required String campaignId,
+    required String label,
+    required String kind,
+    required double x,
+    required double y,
+  }) async {
+    return await _client
+        .from('room_relation_nodes')
+        .insert({
+          'campaign_id': campaignId,
+          'label': label,
+          'kind': kind,
+          'x': x,
+          'y': y,
+        })
+        .select()
+        .single();
+  }
+
+  /// Seuls les champs fournis sont écrits : déplacer un rond ne renomme rien.
+  Future<void> updateRelationNode({
+    required String nodeId,
+    String? label,
+    String? kind,
+    double? x,
+    double? y,
+  }) async {
+    await _client.from('room_relation_nodes').update({
+      if (label != null) 'label': label,
+      if (kind != null) 'kind': kind,
+      if (x != null) 'x': x,
+      if (y != null) 'y': y,
+    }).eq('id', nodeId);
+  }
+
+  Future<void> deleteRelationNode(String nodeId) async {
+    await _client.from('room_relation_nodes').delete().eq('id', nodeId);
+  }
+
+  Future<void> createRelationLink({
+    required String campaignId,
+    required String fromNodeId,
+    required String toNodeId,
+    String? categoryId,
+    String? label,
+  }) async {
+    await _client.from('room_relation_links').insert({
+      'campaign_id': campaignId,
+      'from_node_id': fromNodeId,
+      'to_node_id': toNodeId,
+      'category_id': categoryId,
+      'label': label,
+    });
+  }
+
+  Future<void> deleteRelationLink(String linkId) async {
+    await _client.from('room_relation_links').delete().eq('id', linkId);
+  }
+
+  Future<Map<String, dynamic>> createRelationCategory({
+    required String campaignId,
+    required String name,
+    required int color,
+    required int position,
+  }) async {
+    return await _client
+        .from('room_relation_categories')
+        .insert({
+          'campaign_id': campaignId,
+          'name': name,
+          'color': color,
+          'position': position,
+        })
+        .select()
+        .single();
+  }
+
+  Future<void> deleteRelationCategory(String categoryId) async {
+    await _client
+        .from('room_relation_categories')
+        .delete()
+        .eq('id', categoryId);
+  }
+
+  Future<void> createRelationFact({
+    required String campaignId,
+    required String nodeId,
+    required String content,
+    required int position,
+  }) async {
+    await _client.from('room_relation_facts').insert({
+      'campaign_id': campaignId,
+      'node_id': nodeId,
+      'content': content,
+      'position': position,
+    });
+  }
+
+  Future<void> updateRelationFact({
+    required String factId,
+    required String content,
+  }) async {
+    await _client
+        .from('room_relation_facts')
+        .update({'content': content}).eq('id', factId);
+  }
+
+  Future<void> deleteRelationFact(String factId) async {
+    await _client.from('room_relation_facts').delete().eq('id', factId);
+  }
+
+  /// Fixe d'un seul geste qui a découvert une information.
+  ///
+  /// Passe par `set_fact_discoverers` plutôt que par des écritures ligne à
+  /// ligne : la fonction vérifie que le MJ est bien le MJ, écarte ceux qui ne
+  /// sont pas membres de la room, et touche le rond pour que la carte se
+  /// rafraîchisse chez tout le monde.
+  Future<void> setFactDiscoverers({
+    required String factId,
+    required List<String> userIds,
+  }) async {
+    await _client.rpc('set_fact_discoverers', params: {
+      'p_fact_id': factId,
+      'p_user_ids': userIds,
+    });
+  }
+
   // ============ TEMPS RÉEL ============
 
   /// Insertions, modifications et suppressions sur [table] pour la room

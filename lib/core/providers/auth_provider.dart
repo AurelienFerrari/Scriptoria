@@ -336,6 +336,122 @@ class AuthProvider extends ChangeNotifier {
     return _supabaseService.closeRoomPoll(pollId);
   }
 
+  Future<Map<String, dynamic>> getRelationGraph(String campaignId) {
+    return _supabaseService.getRelationGraph(campaignId);
+  }
+
+  Future<Map<String, dynamic>> createRelationNode({
+    required String campaignId,
+    required String label,
+    required String kind,
+    required double x,
+    required double y,
+  }) {
+    return _supabaseService.createRelationNode(
+      campaignId: campaignId,
+      label: label,
+      kind: kind,
+      x: x,
+      y: y,
+    );
+  }
+
+  Future<void> updateRelationNode({
+    required String nodeId,
+    String? label,
+    String? kind,
+    double? x,
+    double? y,
+  }) {
+    return _supabaseService.updateRelationNode(
+      nodeId: nodeId,
+      label: label,
+      kind: kind,
+      x: x,
+      y: y,
+    );
+  }
+
+  Future<void> deleteRelationNode(String nodeId) {
+    return _supabaseService.deleteRelationNode(nodeId);
+  }
+
+  Future<void> createRelationLink({
+    required String campaignId,
+    required String fromNodeId,
+    required String toNodeId,
+    String? categoryId,
+    String? label,
+  }) {
+    return _supabaseService.createRelationLink(
+      campaignId: campaignId,
+      fromNodeId: fromNodeId,
+      toNodeId: toNodeId,
+      categoryId: categoryId,
+      label: label,
+    );
+  }
+
+  Future<void> deleteRelationLink(String linkId) {
+    return _supabaseService.deleteRelationLink(linkId);
+  }
+
+  Future<Map<String, dynamic>> createRelationCategory({
+    required String campaignId,
+    required String name,
+    required int color,
+    required int position,
+  }) {
+    return _supabaseService.createRelationCategory(
+      campaignId: campaignId,
+      name: name,
+      color: color,
+      position: position,
+    );
+  }
+
+  Future<void> deleteRelationCategory(String categoryId) {
+    return _supabaseService.deleteRelationCategory(categoryId);
+  }
+
+  Future<void> createRelationFact({
+    required String campaignId,
+    required String nodeId,
+    required String content,
+    required int position,
+  }) {
+    return _supabaseService.createRelationFact(
+      campaignId: campaignId,
+      nodeId: nodeId,
+      content: content,
+      position: position,
+    );
+  }
+
+  Future<void> updateRelationFact({
+    required String factId,
+    required String content,
+  }) {
+    return _supabaseService.updateRelationFact(
+      factId: factId,
+      content: content,
+    );
+  }
+
+  Future<void> deleteRelationFact(String factId) {
+    return _supabaseService.deleteRelationFact(factId);
+  }
+
+  Future<void> setFactDiscoverers({
+    required String factId,
+    required List<String> userIds,
+  }) {
+    return _supabaseService.setFactDiscoverers(
+      factId: factId,
+      userIds: userIds,
+    );
+  }
+
   /// Changements en temps réel sur une table de la room : voir
   /// [SupabaseService.watchRoomTable].
   Stream<RowChange> watchRoomTable(String table, String campaignId) {

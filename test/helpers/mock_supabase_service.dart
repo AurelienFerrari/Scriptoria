@@ -36,6 +36,15 @@ void stubRoomScreens(MockSupabaseService service) {
   when(() => service.getTimelineEvents(any())).thenAnswer((_) async => []);
   when(() => service.getRoomMessages(any())).thenAnswer((_) async => []);
   when(() => service.getRoomPolls(any())).thenAnswer((_) async => []);
+  // Carte des relations : vide, et vue par un joueur.
+  when(() => service.getRelationGraph(any())).thenAnswer(
+    (_) async => {
+      'is_mj': false,
+      'categories': <Map<String, dynamic>>[],
+      'nodes': <Map<String, dynamic>>[],
+      'links': <Map<String, dynamic>>[],
+    },
+  );
   // Aucun changement en temps réel : un test qui en veut fournit son propre
   // flux, qu'il pilote.
   when(() => service.watchRoomTable(any(), any()))

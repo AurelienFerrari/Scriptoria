@@ -6,6 +6,25 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Ajouté
+- Carte des relations de la room, dans l'esprit du journal de bord d'Outer
+  Wilds : des ronds — personnages, lieux, objets, évènements — reliés par des
+  liens de couleur, que le MJ place lui-même et complète par un rond « + ».
+  Chaque rond porte des informations, et chacun ne lit que celles qu'il a
+  découvertes ; les autres s'affichent en « ??? ». Le tri est fait par la
+  base : le texte d'une information non découverte n'arrive jamais jusqu'à
+  l'appareil, seul son nombre est connu — de quoi savoir qu'il reste à
+  chercher, sans rien dévoiler
+- Le MJ crée ses catégories de lien (« famille », « conflit », « dette »...),
+  chacune avec sa couleur, et la légende permet de n'en mettre qu'une en avant
+- La carte se met à jour en temps réel : une information révélée apparaît chez
+  son destinataire sans qu'il ait à rouvrir l'écran. Seul le signal circule,
+  jamais le texte découvert
+- Mesure de fluidité sur cette carte, le seul écran qui dessine et suive le
+  doigt : le nombre d'images affichées, les lentes et les gelées partent sur
+  une trace Firebase Performance. Les chiffres ne remontent qu'en mode profil
+  ou release, la collecte étant désactivée en débogage
+
 ## [0.12.0] - 2026-09-12
 
 ### Ajouté
