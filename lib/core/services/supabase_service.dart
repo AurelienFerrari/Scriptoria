@@ -925,6 +925,39 @@ class SupabaseService {
         .update({'category_id': categoryId}).eq('id', nodeId);
   }
 
+  /// Dépose l'image d'un rond et renvoie son URL publique.
+  ///
+  /// Elle va dans le bucket de la galerie, sous l'identifiant de son auteur —
+  /// ce qu'exige la policy Storage `images_owner_write` — mais sans ligne dans
+  /// `images` : l'image appartient au rond, pas à la galerie de la room, et
+  /// n'a donc pas à apparaître dans les contenus.
+  Future<String?> uploadRelationNodeImage({
+    required XFile file,
+    required String ownerId,
+    required String nodeId,
+  }) {
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    return uploadImage(
+      file: file,
+      bucket: galleryBucket,
+      fileName: '$ownerId/relations/$nodeId-$stamp.jpg',
+    );
+  }
+
+  /// Pose l'image d'un rond, ou la retire avec `null`.
+  ///
+  /// Le fichier reste dans le bucket : le MJ peut retirer l'image d'un rond
+  /// sans posséder le fichier, et mieux vaut un fichier orphelin qu'un rond
+  /// qu'on ne peut plus dépouiller.
+  Future<void> setRelationNodeImage({
+    required String nodeId,
+    String? imageUrl,
+  }) async {
+    await _client
+        .from('room_relation_nodes')
+        .update({'image_url': imageUrl}).eq('id', nodeId);
+  }
+
   Future<void> deleteRelationNode(String nodeId) async {
     await _client.from('room_relation_nodes').delete().eq('id', nodeId);
   }

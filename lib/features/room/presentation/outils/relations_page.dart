@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/monitoring/frame_watch.dart';
@@ -11,6 +12,7 @@ import '../../../../core/services/row_change.dart';
 import '../../../../core/utils/friendly_error.dart';
 import '../audience_dialog.dart';
 import '../expandable_text.dart';
+import '../zoomable_image_viewer.dart';
 
 const Color _bgColor = Color(0xFF161622);
 const Color _cardColor = Color(0xFF232336);
@@ -92,6 +94,7 @@ class RelationsPage extends StatefulWidget {
 
 class _RelationsPageState extends State<RelationsPage> {
   final TransformationController _transform = TransformationController();
+  final ImagePicker _picker = ImagePicker();
 
   /// Mesure la fluidité de cet écran : c'est le seul qui dessine et qui suit
   /// le doigt, donc le seul où les images peuvent manquer.
@@ -683,6 +686,43 @@ class _RelationsPageState extends State<RelationsPage> {
         ));
   }
 
+  /// Donne un visage à un rond.
+  ///
+  /// Sur une carte qui compte vingt ronds, un portrait ou une vue de lieu se
+  /// reconnaît bien plus vite qu'un nom. L'image n'est pas un secret : elle
+  /// suit le rond, que tout le monde voit déjà — ce qui se découvre, ce sont
+  /// les informations.
+  Future<void> _setNodeImage(Map<String, dynamic> node) async {
+    final file = await _picker.pickImage(source: ImageSource.gallery);
+    if (file == null || !mounted) return;
+
+    final auth = context.read<AuthProvider>();
+    final ownerId = auth.currentUser?.id;
+    if (ownerId == null) return;
+
+    final nodeId = node['id'] as String;
+    await _mutate(() async {
+      final url = await auth.uploadRelationNodeImage(
+        file: file,
+        ownerId: ownerId,
+        nodeId: nodeId,
+      );
+      // Le dépôt a échoué sans lever : mieux vaut garder l'image précédente
+      // que poser une URL vide sur le rond.
+      if (url == null) return;
+      await auth.setRelationNodeImage(nodeId: nodeId, imageUrl: url);
+    });
+  }
+
+  /// Retire l'image d'un rond, qui retrouve son icône de type.
+  Future<void> _removeNodeImage(Map<String, dynamic> node) async {
+    final auth = context.read<AuthProvider>();
+    await _mutate(() => auth.setRelationNodeImage(
+          nodeId: node['id'] as String,
+          imageUrl: null,
+        ));
+  }
+
   Future<void> _manageCategories() async {
     await showModalBottomSheet<void>(
       context: context,
@@ -888,6 +928,10 @@ class _RelationsPageState extends State<RelationsPage> {
             ],
           ],
         ),
+        if (node['image_url'] != null) ...[
+          const SizedBox(height: 12),
+          _buildNodeImage(node['image_url'] as String),
+        ],
         // Les actions du MJ sont en tête : enfouies sous les informations,
         // elles restaient introuvables.
         if (_isMj) ...[
@@ -933,6 +977,33 @@ class _RelationsPageState extends State<RelationsPage> {
                   await refresh();
                 },
               ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.image_outlined, size: 18),
+                label: Text(
+                  node['image_url'] == null ? 'Image' : 'Changer l\'image',
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white70,
+                  side: const BorderSide(color: Colors.white24),
+                ),
+                onPressed: () async {
+                  await _setNodeImage(node);
+                  await refresh();
+                },
+              ),
+              if (node['image_url'] != null)
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.hide_image_outlined, size: 18),
+                  label: const Text('Retirer l\'image'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                    side: const BorderSide(color: Colors.white24),
+                  ),
+                  onPressed: () async {
+                    await _removeNodeImage(node);
+                    await refresh();
+                  },
+                ),
             ],
           ),
         ],
@@ -960,6 +1031,36 @@ class _RelationsPageState extends State<RelationsPage> {
           for (final link in connected) _buildLinkTile(link, nodeId, refresh),
         ],
       ],
+    );
+  }
+
+  /// L'image du rond dans sa fiche, touchable pour la voir en entier.
+  ///
+  /// Réutilise la visionneuse du fil : une seule image, zoomable au pincement
+  /// et au double-tap.
+  Widget _buildNodeImage(String url) {
+    return Tooltip(
+      message: 'Voir l\'image en entier',
+      child: GestureDetector(
+        onTap: () => showSingleImageViewer(context, url),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            url,
+            height: 180,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stack) => Container(
+              height: 180,
+              color: _bgColor,
+              child: const Center(
+                child: Icon(Icons.broken_image_outlined,
+                    color: Colors.white38, size: 32),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1274,6 +1375,7 @@ class _RelationsPageState extends State<RelationsPage> {
     final discoveryColor = remaining > 0 ? _unknownColor : _primaryColor;
     final color = _nodeColor(node, discoveryColor);
     final category = _categoryById(node['category_id'] as String?);
+    final imageUrl = node['image_url'] as String?;
 
     // Comme pour les liens : la catégorie mise en avant depuis la légende
     // éclaire, les autres s'effacent. C'est un filtre du regard.
@@ -1288,10 +1390,24 @@ class _RelationsPageState extends State<RelationsPage> {
         shape: BoxShape.circle,
         border: Border.all(color: color, width: 2),
       ),
-      child: Icon(
-        _kindIcons[node['kind']] ?? Icons.circle_outlined,
-        color: color,
-      ),
+      // L'image remplit le rond ; le contour de catégorie reste visible autour.
+      child: imageUrl == null
+          ? Icon(_kindIcons[node['kind']] ?? Icons.circle_outlined,
+              color: color)
+          : ClipOval(
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                width: _nodeRadius * 2,
+                height: _nodeRadius * 2,
+                // Une image absente ou illisible ne doit pas trouer la carte :
+                // le rond retombe sur son icône de type.
+                errorBuilder: (context, error, stack) => Icon(
+                  _kindIcons[node['kind']] ?? Icons.circle_outlined,
+                  color: color,
+                ),
+              ),
+            ),
     );
 
     return Positioned(

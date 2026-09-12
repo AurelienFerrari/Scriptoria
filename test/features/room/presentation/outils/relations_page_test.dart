@@ -7,6 +7,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:scriptoria/core/providers/auth_provider.dart';
 import 'package:scriptoria/core/services/row_change.dart';
 import 'package:scriptoria/features/room/presentation/outils/relations_page.dart';
+import 'package:scriptoria/features/room/presentation/zoomable_image_viewer.dart';
 
 import '../../../../helpers/mock_supabase_service.dart';
 import '../../../../helpers/room_harness.dart';
@@ -32,6 +33,7 @@ Map<String, dynamic> _node({
   String label = 'Le baron',
   String kind = 'person',
   String? categoryId,
+  String? imageUrl,
   double x = 400,
   double y = 400,
   List<Map<String, dynamic>> facts = const [],
@@ -41,6 +43,7 @@ Map<String, dynamic> _node({
       'label': label,
       'kind': kind,
       'category_id': categoryId,
+      'image_url': imageUrl,
       'x': x,
       'y': y,
       'fact_count': facts.length,
@@ -125,6 +128,10 @@ void main() {
           nodeId: any(named: 'nodeId'),
           content: any(named: 'content'),
           position: any(named: 'position'),
+        )).thenAnswer((_) async {});
+    when(() => service.setRelationNodeImage(
+          nodeId: any(named: 'nodeId'),
+          imageUrl: any(named: 'imageUrl'),
         )).thenAnswer((_) async {});
     when(() => service.updateRelationFact(
           factId: any(named: 'factId'),
@@ -267,6 +274,7 @@ void main() {
       expect(find.byTooltip('Supprimer le rond'), findsNothing);
       expect(find.byTooltip('Qui a découvert cette information'), findsNothing);
       expect(find.byTooltip('Modifier cette information'), findsNothing);
+      expect(find.text('Image'), findsNothing);
     });
   });
 
@@ -396,6 +404,26 @@ void main() {
             content: 'Il ment sur son âge.',
             // À la suite de celle qui existe déjà.
             position: 1,
+          )).called(1);
+    });
+
+    testWidgets('retire l\'image d\'un rond', (tester) async {
+      await pumpMap(
+        tester,
+        _graph(isMj: true, nodes: [
+          _node(imageUrl: 'https://exemple.test/baron.jpg'),
+        ]),
+        asMj: true,
+      );
+
+      await tester.tap(find.text('Le baron'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Retirer l\'image'));
+      await tester.pumpAndSettle();
+
+      verify(() => service.setRelationNodeImage(
+            nodeId: 'node-1',
+            imageUrl: null,
           )).called(1);
     });
 
@@ -605,6 +633,23 @@ void main() {
 
     expect(tester.widget<Text>(find.text(long)).maxLines, isNull);
     expect(find.text('Voir moins'), findsOneWidget);
+  });
+
+  testWidgets('montre l\'image du rond, et l\'ouvre en grand au toucher',
+      (tester) async {
+    await pumpMap(
+      tester,
+      _graph(nodes: [_node(imageUrl: 'https://exemple.test/baron.jpg')]),
+    );
+
+    await tester.tap(find.text('Le baron'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Voir l\'image en entier'));
+    await tester.pumpAndSettle();
+
+    // La visionneuse du fil, zoomable au pincement et au double-tap.
+    expect(find.byType(ZoomableImageViewer), findsOneWidget);
   });
 
   testWidgets('le rond porte la couleur de sa catégorie', (tester) async {

@@ -24,6 +24,11 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   Elle est annoncée comme telle — « Mettre en avant » — parce qu'on la prenait
   pour un moyen d'attribuer une couleur, et que la voir agir sur toute la carte
   donnait l'impression de tout modifier
+- Un rond peut porter une image, affichée en miniature dans le rond lui-même
+  et en grand dans sa fiche, d'où un toucher l'ouvre en plein écran, zoomable.
+  Sur une carte qui compte vingt ronds, un portrait se reconnaît plus vite
+  qu'un nom. Une image absente ou illisible ne troue pas la carte : le rond
+  retombe sur son icône de type
 - Les informations d'un rond se lisent en plus grand, et une explication trop
   longue est repliée à une ligne, dépliable par « Voir plus » — le même repli
   que sur le fil et la frise. Rien ne borne la longueur d'une information, et

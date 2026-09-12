@@ -384,6 +384,28 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
+  Future<String?> uploadRelationNodeImage({
+    required XFile file,
+    required String ownerId,
+    required String nodeId,
+  }) {
+    return _supabaseService.uploadRelationNodeImage(
+      file: file,
+      ownerId: ownerId,
+      nodeId: nodeId,
+    );
+  }
+
+  Future<void> setRelationNodeImage({
+    required String nodeId,
+    String? imageUrl,
+  }) {
+    return _supabaseService.setRelationNodeImage(
+      nodeId: nodeId,
+      imageUrl: imageUrl,
+    );
+  }
+
   Future<void> deleteRelationNode(String nodeId) {
     return _supabaseService.deleteRelationNode(nodeId);
   }
