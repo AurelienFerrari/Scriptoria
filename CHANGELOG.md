@@ -24,6 +24,13 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   Elle est annoncée comme telle — « Mettre en avant » — parce qu'on la prenait
   pour un moyen d'attribuer une couleur, et que la voir agir sur toute la carte
   donnait l'impression de tout modifier
+- Les informations d'un rond se lisent en plus grand, et une explication trop
+  longue est repliée à une ligne, dépliable par « Voir plus » — le même repli
+  que sur le fil et la frise. Rien ne borne la longueur d'une information, et
+  une seule un peu longue rendait la fiche impossible à parcourir
+- Le MJ peut corriger une information déjà écrite, et pas seulement l'ajouter
+  ou la supprimer. Le texte part tel quel dans le champ, et ce qui a déjà été
+  découvert le reste — corriger n'est pas re-cacher
 - Le MJ peut vider la carte en entier, avec une confirmation qui annonce ce
   qui part : les ronds, leurs liens, leurs informations, les catégories et
   les découvertes des joueurs

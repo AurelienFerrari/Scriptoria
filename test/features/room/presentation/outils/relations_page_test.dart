@@ -126,6 +126,10 @@ void main() {
           content: any(named: 'content'),
           position: any(named: 'position'),
         )).thenAnswer((_) async {});
+    when(() => service.updateRelationFact(
+          factId: any(named: 'factId'),
+          content: any(named: 'content'),
+        )).thenAnswer((_) async {});
     when(() => service.setFactDiscoverers(
           factId: any(named: 'factId'),
           userIds: any(named: 'userIds'),
@@ -262,6 +266,7 @@ void main() {
       expect(find.text('Catégorie'), findsNothing);
       expect(find.byTooltip('Supprimer le rond'), findsNothing);
       expect(find.byTooltip('Qui a découvert cette information'), findsNothing);
+      expect(find.byTooltip('Modifier cette information'), findsNothing);
     });
   });
 
@@ -391,6 +396,39 @@ void main() {
             content: 'Il ment sur son âge.',
             // À la suite de celle qui existe déjà.
             position: 1,
+          )).called(1);
+    });
+
+    testWidgets('corrige une information déjà écrite', (tester) async {
+      await pumpMap(
+        tester,
+        _graph(isMj: true, nodes: [
+          _node(facts: [_fact(content: 'Il a vendu la carte.')]),
+        ]),
+        asMj: true,
+      );
+
+      await tester.tap(find.text('Le baron'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Modifier cette information'));
+      await tester.pumpAndSettle();
+
+      // Le texte part tel quel : on corrige une phrase, on ne la réécrit pas.
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        'Il a vendu la carte.',
+      );
+
+      await tester.enterText(
+        find.byType(TextField),
+        'Il a vendu la carte aux contrebandiers.',
+      );
+      await tester.tap(find.widgetWithText(TextButton, 'Valider'));
+      await tester.pumpAndSettle();
+
+      verify(() => service.updateRelationFact(
+            factId: 'fact-1',
+            content: 'Il a vendu la carte aux contrebandiers.',
           )).called(1);
     });
 
@@ -540,6 +578,33 @@ void main() {
     await pumpMap(tester, _graph(nodes: [_node()]));
 
     expect(find.byTooltip('Vider la carte'), findsNothing);
+  });
+
+  testWidgets('replie une information trop longue, et la déplie au toucher',
+      (tester) async {
+    const long = 'Le baron a vendu la carte aux contrebandiers du port, puis '
+        'il a fait disparaître les témoins un à un, et plus personne dans la '
+        'cité n\'ose prononcer son nom à voix haute.';
+
+    await pumpMap(
+      tester,
+      _graph(nodes: [
+        _node(facts: [_fact(content: long)]),
+      ]),
+    );
+
+    await tester.tap(find.text('Le baron'));
+    await tester.pumpAndSettle();
+
+    // Repliée, la fiche reste parcourable même avec plusieurs informations.
+    expect(tester.widget<Text>(find.text(long)).maxLines, 1);
+    expect(find.text('Voir plus'), findsOneWidget);
+
+    await tester.tap(find.text('Voir plus'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<Text>(find.text(long)).maxLines, isNull);
+    expect(find.text('Voir moins'), findsOneWidget);
   });
 
   testWidgets('le rond porte la couleur de sa catégorie', (tester) async {

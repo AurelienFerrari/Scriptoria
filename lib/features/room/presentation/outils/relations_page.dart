@@ -10,6 +10,7 @@ import '../../../../core/providers/room_provider.dart';
 import '../../../../core/services/row_change.dart';
 import '../../../../core/utils/friendly_error.dart';
 import '../audience_dialog.dart';
+import '../expandable_text.dart';
 
 const Color _bgColor = Color(0xFF161622);
 const Color _cardColor = Color(0xFF232336);
@@ -377,6 +378,28 @@ class _RelationsPageState extends State<RelationsPage> {
           nodeId: nodeId,
           content: content,
           position: position,
+        ));
+  }
+
+  /// Le MJ corrige une information déjà écrite.
+  ///
+  /// Le texte part tel quel dans le champ : on rattrape une faute ou on
+  /// précise une phrase, on ne la réécrit pas de mémoire. Ce qui a déjà été
+  /// découvert le reste — corriger n'est pas re-cacher.
+  Future<void> _editFact(Map<String, dynamic> fact) async {
+    final content = await _askText(
+      title: 'Modifier l\'information',
+      label: 'Information',
+      initial: fact['content'] as String?,
+      hint: 'Ce que l\'on peut apprendre ici…',
+      maxLines: 4,
+    );
+    if (content == null || !mounted) return;
+
+    final auth = context.read<AuthProvider>();
+    await _mutate(() => auth.updateRelationFact(
+          factId: fact['id'] as String,
+          content: content,
         ));
   }
 
@@ -954,25 +977,36 @@ class _RelationsPageState extends State<RelationsPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            content == null ? Icons.help_outline : Icons.check_circle_outline,
-            size: 16,
-            color: content == null ? _unknownColor : _primaryColor,
+          Padding(
+            // Aligné sur la première ligne, désormais plus haute.
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(
+              content == null ? Icons.help_outline : Icons.check_circle_outline,
+              size: 18,
+              color: content == null ? _unknownColor : _primaryColor,
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                if (content == null)
                   // La base n'a pas envoyé le texte : il reste à découvrir.
-                  content ?? '???',
-                  style: TextStyle(
-                    color: content == null ? _unknownColor : Colors.white,
-                    height: 1.35,
-                    letterSpacing: content == null ? 2 : null,
-                  ),
-                ),
+                  const Text(
+                    '???',
+                    style: TextStyle(
+                      color: _unknownColor,
+                      fontSize: 15,
+                      height: 1.45,
+                      letterSpacing: 2,
+                    ),
+                  )
+                else
+                  // Replié à une ligne, comme sur le fil et la frise : rien ne
+                  // borne la longueur d'une information, et une seule un peu
+                  // longue rendrait la fiche impossible à parcourir.
+                  ExpandableText(text: content),
                 if (_isMj)
                   Text(
                     discoveredBy.isEmpty
@@ -989,8 +1023,19 @@ class _RelationsPageState extends State<RelationsPage> {
           ),
           if (_isMj) ...[
             IconButton(
+              icon: const Icon(Icons.edit_outlined,
+                  color: Colors.white54, size: 20),
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Modifier cette information',
+              onPressed: () async {
+                await _editFact(fact);
+                await refresh();
+              },
+            ),
+            IconButton(
               icon: const Icon(Icons.visibility_outlined,
                   color: Colors.white54, size: 20),
+              visualDensity: VisualDensity.compact,
               tooltip: 'Qui a découvert cette information',
               onPressed: () async {
                 await _editDiscoverers(fact);
@@ -1000,6 +1045,7 @@ class _RelationsPageState extends State<RelationsPage> {
             IconButton(
               icon:
                   const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+              visualDensity: VisualDensity.compact,
               tooltip: 'Supprimer cette information',
               onPressed: () async {
                 final auth = context.read<AuthProvider>();
