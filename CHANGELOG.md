@@ -4,7 +4,11 @@ Toutes les modifications notables de ce projet sont documentées ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [1.0.0] - 2026-09-12
+
+Première version complète : une room réunit désormais son fil, sa galerie,
+ses notes, son dé, sa frise, son chat et sa carte des relations — et chacun
+de ces outils tient ses secrets côté base, jamais côté écran.
 
 ### Corrigé
 - Corriger une information de la carte des relations échouait. Les policies
