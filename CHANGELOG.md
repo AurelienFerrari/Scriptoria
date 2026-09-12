@@ -6,6 +6,20 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Corrigé
+- Corriger une information de la carte des relations échouait. Les policies
+  des informations et des découvertes se lisaient l'une l'autre, et Postgres
+  refusait la requête pour récursion infinie. Le défaut ne se voyait nulle
+  part ailleurs : lire la carte passe par une fonction `security definer`, et
+  créer une information est un `insert` sans relecture — mais une mise à jour
+  doit retrouver sa ligne, donc évaluer la policy de lecture. Chaque test
+  passe désormais par une fonction `security definer`, comme
+  `is_campaign_member`, ce qui rompt le cycle sans rien élargir
+- Une écriture refusée s'annonce maintenant dans une boîte. Elle s'affichait
+  dans une SnackBar, qui passe derrière la feuille modale d'où partent presque
+  toutes les actions du MJ : l'erreur existait, mais le geste avait l'air de
+  n'avoir simplement rien fait
+
 ### Ajouté
 - Carte des relations de la room, dans l'esprit du journal de bord d'Outer
   Wilds : des ronds — personnages, lieux, objets, évènements — reliés par des

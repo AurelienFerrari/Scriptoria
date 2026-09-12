@@ -466,6 +466,33 @@ void main() {
       expect(field.expands, isTrue);
     });
 
+    testWidgets('annonce visiblement une écriture refusée', (tester) async {
+      when(() => service.updateRelationFact(
+            factId: any(named: 'factId'),
+            content: any(named: 'content'),
+          )).thenThrow(Exception('refus du serveur'));
+
+      await pumpMap(
+        tester,
+        _graph(isMj: true, nodes: [
+          _node(facts: [_fact(content: 'Il a vendu la carte.')]),
+        ]),
+        asMj: true,
+      );
+
+      await tester.tap(find.text('Le baron'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Modifier cette information'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Corrigé.');
+      await tester.tap(find.widgetWithText(TextButton, 'Valider'));
+      await tester.pumpAndSettle();
+
+      // Dans une boîte, et non une SnackBar : celle-ci passe derrière la
+      // feuille modale, et le geste a l'air de n'avoir rien fait.
+      expect(find.text('Action impossible'), findsOneWidget);
+    });
+
     testWidgets('retire l\'image d\'un rond', (tester) async {
       await pumpMap(
         tester,

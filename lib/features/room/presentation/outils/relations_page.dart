@@ -291,7 +291,34 @@ class _RelationsPageState extends State<RelationsPage> {
     );
   }
 
-  void _showError(Object error) => _showMessage(friendlyErrorMessage(error));
+  /// Annonce un échec dans une boîte, et non dans une SnackBar.
+  ///
+  /// Les écritures du MJ partent presque toutes d'une feuille modale, qui
+  /// recouvre la SnackBar : l'erreur s'affichait derrière, et le geste avait
+  /// l'air de n'avoir simplement rien fait. Une boîte passe au-dessus.
+  void _showError(Object error) {
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _cardColor,
+        title: const Text(
+          'Action impossible',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          friendlyErrorMessage(error),
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Exécute une écriture du MJ, puis relit la carte.
   Future<bool> _mutate(Future<void> Function() action) async {
