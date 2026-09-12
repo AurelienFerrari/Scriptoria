@@ -47,6 +47,27 @@ Map<String, dynamic> _node({
       'facts': facts,
     };
 
+Map<String, dynamic> _link({
+  String id = 'link-1',
+  String from = 'node-1',
+  String to = 'node-2',
+  String? categoryId,
+}) =>
+    {
+      'id': id,
+      'from_node_id': from,
+      'to_node_id': to,
+      'category_id': categoryId,
+      'label': null,
+    };
+
+Map<String, dynamic> _category({
+  String id = 'cat-1',
+  String name = 'Conflit',
+  int color = 0xFFE37B7B,
+}) =>
+    {'id': id, 'name': name, 'color': color, 'position': 0};
+
 Map<String, dynamic> _graph({
   bool isMj = false,
   List<Map<String, dynamic>> nodes = const [],
@@ -107,7 +128,11 @@ void main() {
           name: any(named: 'name'),
           color: any(named: 'color'),
           position: any(named: 'position'),
-        )).thenAnswer((_) async => {'id': 'cat-1'});
+        )).thenAnswer((_) async => _category());
+    when(() => service.updateRelationLink(
+          linkId: any(named: 'linkId'),
+          categoryId: any(named: 'categoryId'),
+        )).thenAnswer((_) async {});
   });
 
   tearDown(() => changes.close());
@@ -130,6 +155,38 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  group('cadrage de la carte', () {
+    testWidgets('amène le contenu au milieu de l\'écran à l\'ouverture',
+        (tester) async {
+      // La carte fait plus de 1000 dp de côté : sans cadrage, l'écran
+      // s'ouvre sur son coin haut-gauche, qui est vide.
+      await pumpMap(tester, _graph(nodes: [_node(x: 700, y: 500)]));
+
+      final viewer = tester.widget<InteractiveViewer>(
+        find.byType(InteractiveViewer),
+      );
+      final translation =
+          viewer.transformationController!.value.getTranslation();
+
+      // Le rond, à 700, se retrouve au milieu des 800 dp de l'écran de test.
+      expect(translation.x, closeTo(400 - 700, 1));
+      expect(translation.y, lessThan(0));
+    });
+
+    testWidgets('le rond + ne suit pas un rond que l\'on déplace',
+        (tester) async {
+      await pumpMap(tester, _graph(isMj: true, nodes: [_node()]), asMj: true);
+
+      final before = tester.getRect(find.byTooltip('Ajouter un rond'));
+      await tester.drag(find.text('Le baron'), const Offset(120, 60));
+      await tester.pumpAndSettle();
+
+      // Sa place est fixée au chargement : déduite du rond le plus à droite,
+      // elle suivait le doigt comme si les deux étaient attachés.
+      expect(tester.getRect(find.byTooltip('Ajouter un rond')), before);
+    });
+  });
 
   group('vue joueur', () {
     testWidgets('affiche les ronds de la carte', (tester) async {
@@ -192,8 +249,8 @@ void main() {
       await tester.tap(find.text('Le baron'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Ajouter une information'), findsNothing);
-      expect(find.text('Relier à un autre rond'), findsNothing);
+      expect(find.text('Information'), findsNothing);
+      expect(find.text('Relier'), findsNothing);
       expect(find.byTooltip('Supprimer le rond'), findsNothing);
       expect(find.byTooltip('Qui a découvert cette information'), findsNothing);
     });
@@ -259,7 +316,7 @@ void main() {
 
       await tester.tap(find.text('Le baron'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Ajouter une information'));
+      await tester.tap(find.text('Information'));
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField), 'Il ment sur son âge.');
@@ -342,6 +399,48 @@ void main() {
             position: 0,
           )).called(1);
     });
+
+    testWidgets('pose une catégorie sur un lien déjà tracé', (tester) async {
+      await pumpMap(
+        tester,
+        _graph(
+          isMj: true,
+          nodes: [_node(), _node(id: 'node-2', label: 'La citadelle', x: 700)],
+          links: [_link()],
+          categories: [_category()],
+        ),
+        asMj: true,
+      );
+
+      await tester.tap(find.text('Le baron'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sans catégorie'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Changer la catégorie du lien'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Conflit').last);
+      await tester.pumpAndSettle();
+
+      verify(() => service.updateRelationLink(
+            linkId: 'link-1',
+            categoryId: 'cat-1',
+          )).called(1);
+    });
+
+    testWidgets('explique qu\'il faut un deuxième rond pour relier',
+        (tester) async {
+      await pumpMap(tester, _graph(isMj: true, nodes: [_node()]), asMj: true);
+
+      await tester.tap(find.text('Le baron'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Relier'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ajoutez un deuxième rond pour pouvoir les relier.'),
+        findsOneWidget,
+      );
+    });
   });
 
   testWidgets('la légende met une catégorie en avant', (tester) async {
@@ -349,18 +448,8 @@ void main() {
       tester,
       _graph(
         nodes: [_node(), _node(id: 'node-2', label: 'La citadelle', x: 700)],
-        links: [
-          {
-            'id': 'link-1',
-            'from_node_id': 'node-1',
-            'to_node_id': 'node-2',
-            'category_id': 'cat-1',
-            'label': null,
-          },
-        ],
-        categories: [
-          {'id': 'cat-1', 'name': 'Conflit', 'color': 0xFFE37B7B, 'position': 0},
-        ],
+        links: [_link(categoryId: 'cat-1')],
+        categories: [_category()],
       ),
     );
 

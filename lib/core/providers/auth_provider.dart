@@ -392,6 +392,16 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
+  Future<void> updateRelationLink({
+    required String linkId,
+    String? categoryId,
+  }) {
+    return _supabaseService.updateRelationLink(
+      linkId: linkId,
+      categoryId: categoryId,
+    );
+  }
+
   Future<void> deleteRelationLink(String linkId) {
     return _supabaseService.deleteRelationLink(linkId);
   }

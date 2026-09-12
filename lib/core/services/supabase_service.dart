@@ -929,6 +929,16 @@ class SupabaseService {
     });
   }
 
+  /// Change la catégorie d'un lien déjà posé, ou la retire avec `null`.
+  Future<void> updateRelationLink({
+    required String linkId,
+    String? categoryId,
+  }) async {
+    await _client
+        .from('room_relation_links')
+        .update({'category_id': categoryId}).eq('id', linkId);
+  }
+
   Future<void> deleteRelationLink(String linkId) async {
     await _client.from('room_relation_links').delete().eq('id', linkId);
   }

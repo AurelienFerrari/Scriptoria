@@ -23,6 +23,9 @@ const double _nodeLabelHeight = 34;
 /// Marge conservée autour des ronds sur la carte.
 const double _canvasPadding = 400;
 
+/// Écart entre le dernier rond posé et le rond « + ».
+const double _addSpotGap = 180;
+
 /// Palette proposée au MJ pour ses catégories de lien.
 const List<int> _categoryPalette = [
   0xFF6FE3E1,
@@ -46,6 +49,30 @@ const Map<String, String> _kindLabels = {
   'thing': 'Objet',
   'event': 'Évènement',
 };
+
+/// Habillage des champs de saisie des boîtes de dialogue.
+///
+/// Sans lui, Flutter affiche son champ souligné par défaut : sur une saisie de
+/// plusieurs lignes, le trait se retrouve loin sous le texte, et dans une
+/// couleur qui n'est pas celle de l'application.
+InputDecoration _dialogField(String label, {String? hint}) {
+  return InputDecoration(
+    labelText: label,
+    hintText: hint,
+    labelStyle: const TextStyle(color: Colors.white54),
+    hintStyle: const TextStyle(color: Colors.white38),
+    filled: true,
+    fillColor: _bgColor,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide.none,
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: _primaryColor, width: 2),
+    ),
+  );
+}
 
 /// Carte des relations de la room, dans l'esprit du journal de bord d'Outer
 /// Wilds : des ronds reliés par des liens de couleur, et sur chacun les
@@ -78,6 +105,17 @@ class _RelationsPageState extends State<RelationsPage> {
   /// enregistrées.
   final Map<String, Offset> _positions = {};
   String? _dragging;
+
+  /// Place du rond « + ».
+  ///
+  /// Fixée au chargement, et non recalculée à partir des ronds : déduite du
+  /// rond le plus à droite, elle suivait le doigt pendant un déplacement,
+  /// comme si les deux étaient attachés.
+  Offset _addSpot = const Offset(400, 400);
+
+  /// La vue se cadre sur le contenu au premier affichage : la carte est bien
+  /// plus grande que l'écran, et son coin haut-gauche est vide.
+  bool _needsCentering = true;
 
   /// Catégorie de lien mise en avant, ou `null` pour toutes.
   String? _filter;
@@ -165,8 +203,20 @@ class _RelationsPageState extends State<RelationsPage> {
             (node['y'] as num).toDouble(),
           );
         }
+        _addSpot = _freeSpot();
       }
     });
+  }
+
+  /// Place libre pour le prochain rond : à droite du dernier posé.
+  Offset _freeSpot() {
+    if (_nodes.isEmpty) return const Offset(400, 400);
+    var rightmost = _positionOf(_nodes.first);
+    for (final node in _nodes) {
+      final position = _positionOf(node);
+      if (position.dx > rightmost.dx) rightmost = position;
+    }
+    return rightmost + const Offset(_addSpotGap, 0);
   }
 
   Map<String, dynamic>? _nodeById(String id) {
@@ -180,11 +230,11 @@ class _RelationsPageState extends State<RelationsPage> {
       _positions[node['id']] ??
       Offset((node['x'] as num).toDouble(), (node['y'] as num).toDouble());
 
-  /// Taille de la carte : de quoi contenir tous les ronds, plus une marge pour
-  /// pouvoir en poser de nouveaux au large.
+  /// Taille de la carte : de quoi contenir tous les ronds et le rond « + »,
+  /// plus une marge pour pouvoir en poser d'autres au large.
   Size get _canvasSize {
-    var maxX = 800.0;
-    var maxY = 800.0;
+    var maxX = math.max(800.0, _addSpot.dx);
+    var maxY = math.max(800.0, _addSpot.dy);
     for (final node in _nodes) {
       final position = _positionOf(node);
       maxX = math.max(maxX, position.dx);
@@ -193,22 +243,48 @@ class _RelationsPageState extends State<RelationsPage> {
     return Size(maxX + _canvasPadding, maxY + _canvasPadding);
   }
 
-  /// Place libre pour le prochain rond : à droite du dernier posé.
-  Offset get _nextFreeSpot {
-    if (_nodes.isEmpty) return const Offset(400, 400);
-    var rightmost = _positionOf(_nodes.first);
-    for (final node in _nodes) {
-      final position = _positionOf(node);
-      if (position.dx > rightmost.dx) rightmost = position;
+  /// Ce que la carte contient réellement, pour savoir sur quoi se cadrer.
+  Rect get _contentBounds {
+    final points = <Offset>[
+      for (final node in _nodes) _positionOf(node),
+      if (_isMj) _addSpot,
+    ];
+    if (points.isEmpty) {
+      return Rect.fromCircle(center: _addSpot, radius: _nodeRadius * 2);
     }
-    return rightmost + const Offset(180, 0);
+
+    var left = points.first.dx;
+    var right = points.first.dx;
+    var top = points.first.dy;
+    var bottom = points.first.dy;
+    for (final point in points) {
+      left = math.min(left, point.dx);
+      right = math.max(right, point.dx);
+      top = math.min(top, point.dy);
+      bottom = math.max(bottom, point.dy);
+    }
+    return Rect.fromLTRB(left, top, right, bottom)
+        .inflate(_nodeRadius + _nodeLabelHeight);
   }
 
-  void _showError(Object error) {
+  /// Amène le contenu au milieu de l'écran.
+  void _centerOn(Size viewport) {
+    if (!mounted) return;
+    final center = _contentBounds.center;
+    _transform.value = Matrix4.identity()
+      ..translate(
+        viewport.width / 2 - center.dx,
+        viewport.height / 2 - center.dy,
+      );
+  }
+
+  void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(friendlyErrorMessage(error))),
+      SnackBar(content: Text(message)),
     );
   }
+
+  void _showError(Object error) => _showMessage(friendlyErrorMessage(error));
 
   /// Exécute une écriture du MJ, puis relit la carte.
   Future<bool> _mutate(Future<void> Function() action) async {
@@ -281,6 +357,7 @@ class _RelationsPageState extends State<RelationsPage> {
   Future<void> _addFact(String nodeId) async {
     final content = await _askText(
       title: 'Nouvelle information',
+      label: 'Information',
       hint: 'Ce que l\'on peut apprendre ici…',
       maxLines: 4,
     );
@@ -301,6 +378,7 @@ class _RelationsPageState extends State<RelationsPage> {
 
   Future<String?> _askText({
     required String title,
+    required String label,
     String? initial,
     String? hint,
     int maxLines = 1,
@@ -309,6 +387,7 @@ class _RelationsPageState extends State<RelationsPage> {
       context: context,
       builder: (ctx) => _TextPromptDialog(
         title: title,
+        label: label,
         initial: initial,
         hint: hint,
         maxLines: maxLines,
@@ -320,8 +399,9 @@ class _RelationsPageState extends State<RelationsPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
+        backgroundColor: _cardColor,
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        content: Text(message, style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -370,11 +450,12 @@ class _RelationsPageState extends State<RelationsPage> {
   Future<void> _linkFrom(String nodeId) async {
     final others = _nodes.where((n) => n['id'] != nodeId).toList();
     if (others.isEmpty) {
-      _showError(StateError('Il faut un deuxième rond pour poser un lien.'));
+      // Ce n'est pas une erreur, seulement une carte encore trop petite.
+      _showMessage('Ajoutez un deuxième rond pour pouvoir les relier.');
       return;
     }
 
-    String target = others.first['id'] as String;
+    var target = others.first['id'] as String;
     String? category =
         _categories.isEmpty ? null : _categories.first['id'] as String;
 
@@ -382,18 +463,26 @@ class _RelationsPageState extends State<RelationsPage> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialog) => AlertDialog(
-          title: const Text('Relier à'),
+          backgroundColor: _cardColor,
+          title: const Text(
+            'Relier à',
+            style: TextStyle(color: Colors.white),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButton<String>(
                 isExpanded: true,
+                dropdownColor: _cardColor,
                 value: target,
                 items: [
                   for (final node in others)
                     DropdownMenuItem(
                       value: node['id'] as String,
-                      child: Text(node['label'] as String? ?? ''),
+                      child: Text(
+                        node['label'] as String? ?? '',
+                        style: const TextStyle(color: Colors.white),
+                      ),
                     ),
                 ],
                 onChanged: (value) => setDialog(() => target = value!),
@@ -401,16 +490,23 @@ class _RelationsPageState extends State<RelationsPage> {
               if (_categories.isNotEmpty)
                 DropdownButton<String?>(
                   isExpanded: true,
+                  dropdownColor: _cardColor,
                   value: category,
                   items: [
                     const DropdownMenuItem(
                       value: null,
-                      child: Text('Sans catégorie'),
+                      child: Text(
+                        'Sans catégorie',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                     for (final item in _categories)
                       DropdownMenuItem(
                         value: item['id'] as String,
-                        child: Text(item['name'] as String? ?? ''),
+                        child: Text(
+                          item['name'] as String? ?? '',
+                          style: const TextStyle(color: Colors.white),
+                        ),
                       ),
                   ],
                   onChanged: (value) => setDialog(() => category = value),
@@ -442,6 +538,59 @@ class _RelationsPageState extends State<RelationsPage> {
         ));
   }
 
+  /// Change la catégorie d'un lien déjà posé : c'est par là que les couleurs
+  /// créées par le MJ arrivent réellement sur la carte.
+  Future<void> _changeLinkCategory(Map<String, dynamic> link) async {
+    if (_categories.isEmpty) {
+      _showMessage('Créez d\'abord une catégorie, avec l\'icône palette.');
+      return;
+    }
+
+    final chosen = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        backgroundColor: _cardColor,
+        title: const Text(
+          'Catégorie du lien',
+          style: TextStyle(color: Colors.white),
+        ),
+        children: [
+          for (final category in _categories)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, category['id'] as String),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 8,
+                    backgroundColor: Color((category['color'] as num).toInt()),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    category['name'] as String? ?? '',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, ''),
+            child: const Text(
+              'Sans catégorie',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (chosen == null || !mounted) return;
+
+    final auth = context.read<AuthProvider>();
+    await _mutate(() => auth.updateRelationLink(
+          linkId: link['id'] as String,
+          categoryId: chosen.isEmpty ? null : chosen,
+        ));
+  }
+
   Future<void> _manageCategories() async {
     await showModalBottomSheet<void>(
       context: context,
@@ -459,6 +608,12 @@ class _RelationsPageState extends State<RelationsPage> {
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Une couleur par sorte de relation. Elle se pose ensuite sur '
+                'un lien, depuis la fiche d\'un rond.',
+                style: TextStyle(color: Colors.white54, fontSize: 12),
               ),
               const SizedBox(height: 8),
               for (final category in _categories)
@@ -489,6 +644,7 @@ class _RelationsPageState extends State<RelationsPage> {
                 onPressed: () async {
                   final name = await _askText(
                     title: 'Nouvelle catégorie',
+                    label: 'Nom',
                     hint: 'Famille, conflit, dette…',
                   );
                   if (name == null || !mounted) return;
@@ -499,8 +655,8 @@ class _RelationsPageState extends State<RelationsPage> {
                   final done = await _mutate(() => auth.createRelationCategory(
                         campaignId: roomId,
                         name: name,
-                        color:
-                            _categoryPalette[position % _categoryPalette.length],
+                        color: _categoryPalette[
+                            position % _categoryPalette.length],
                         position: position,
                       ));
                   if (done && mounted) setSheet(() {});
@@ -613,6 +769,40 @@ class _RelationsPageState extends State<RelationsPage> {
           _kindLabels[node['kind']] ?? '',
           style: const TextStyle(color: Colors.white38, fontSize: 12),
         ),
+        // Les actions du MJ sont en tête : enfouies sous les informations,
+        // elles restaient introuvables.
+        if (_isMj) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            children: [
+              OutlinedButton.icon(
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Information'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _primaryColor,
+                  side: const BorderSide(color: _primaryColor),
+                ),
+                onPressed: () async {
+                  await _addFact(nodeId);
+                  await refresh();
+                },
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.timeline, size: 18),
+                label: const Text('Relier'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white70,
+                  side: const BorderSide(color: Colors.white24),
+                ),
+                onPressed: () async {
+                  await _linkFrom(nodeId);
+                  await refresh();
+                },
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 16),
         Text(
           'Informations (${node['discovered_count']}/${node['fact_count']})',
@@ -628,29 +818,12 @@ class _RelationsPageState extends State<RelationsPage> {
             style: TextStyle(color: Colors.white38),
           ),
         for (final fact in facts) _buildFact(fact, refresh),
-        if (_isMj) ...[
-          const SizedBox(height: 8),
-          TextButton.icon(
-            icon: const Icon(Icons.add),
-            label: const Text('Ajouter une information'),
-            onPressed: () async {
-              await _addFact(nodeId);
-              await refresh();
-            },
-          ),
-          const Divider(color: Colors.white12),
-          TextButton.icon(
-            icon: const Icon(Icons.timeline),
-            label: const Text('Relier à un autre rond'),
-            onPressed: () async {
-              await _linkFrom(nodeId);
-              await refresh();
-            },
-          ),
-        ],
         if (connected.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          const Text('Liens', style: TextStyle(color: Colors.white70)),
+          const SizedBox(height: 16),
+          const Text(
+            'Liens',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
           for (final link in connected) _buildLinkTile(link, nodeId, refresh),
         ],
       ],
@@ -756,23 +929,35 @@ class _RelationsPageState extends State<RelationsPage> {
         other?['label'] as String? ?? 'Rond inconnu',
         style: const TextStyle(color: Colors.white),
       ),
-      subtitle: category == null
-          ? null
-          : Text(
-              category['name'] as String? ?? '',
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
-            ),
+      subtitle: Text(
+        category?['name'] as String? ?? 'Sans catégorie',
+        style: const TextStyle(color: Colors.white38, fontSize: 12),
+      ),
       trailing: _isMj
-          ? IconButton(
-              icon: const Icon(Icons.link_off, color: Colors.red, size: 20),
-              tooltip: 'Retirer ce lien',
-              onPressed: () async {
-                final auth = context.read<AuthProvider>();
-                await _mutate(
-                  () => auth.deleteRelationLink(link['id'] as String),
-                );
-                await refresh();
-              },
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.palette_outlined,
+                      color: Colors.white54, size: 20),
+                  tooltip: 'Changer la catégorie du lien',
+                  onPressed: () async {
+                    await _changeLinkCategory(link);
+                    await refresh();
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.link_off, color: Colors.red, size: 20),
+                  tooltip: 'Retirer ce lien',
+                  onPressed: () async {
+                    final auth = context.read<AuthProvider>();
+                    await _mutate(
+                      () => auth.deleteRelationLink(link['id'] as String),
+                    );
+                    await refresh();
+                  },
+                ),
+              ],
             )
           : null,
     );
@@ -802,6 +987,12 @@ class _RelationsPageState extends State<RelationsPage> {
               tooltip: 'Catégories de lien',
               onPressed: _manageCategories,
             ),
+          if (_graph != null)
+            IconButton(
+              icon: const Icon(Icons.center_focus_strong_outlined),
+              tooltip: 'Recentrer la carte',
+              onPressed: () => setState(() => _needsCentering = true),
+            ),
         ],
       ),
       body: SafeArea(child: _buildBody()),
@@ -828,7 +1019,16 @@ class _RelationsPageState extends State<RelationsPage> {
 
     return Column(
       children: [
-        Expanded(child: _buildCanvas()),
+        Expanded(
+          child: Stack(
+            children: [
+              _buildCanvas(),
+              // Posé sur l'écran et non sur la carte : sur la carte, il se
+              // retrouvait de travers, loin du regard.
+              if (_nodes.isEmpty) _buildEmptyHint(),
+            ],
+          ),
+        ),
         if (_categories.isNotEmpty) _buildLegend(),
       ],
     );
@@ -837,43 +1037,55 @@ class _RelationsPageState extends State<RelationsPage> {
   Widget _buildCanvas() {
     final size = _canvasSize;
 
-    return InteractiveViewer(
-      transformationController: _transform,
-      constrained: false,
-      minScale: 0.4,
-      maxScale: 2.5,
-      boundaryMargin: const EdgeInsets.all(200),
-      child: SizedBox(
-        width: size.width,
-        height: size.height,
-        child: Stack(
-          children: [
-            // Isolé dans sa propre couche : déplacer un rond ne fait
-            // repeindre que les liens, pas toute la carte.
-            RepaintBoundary(
-              child: CustomPaint(
-                size: size,
-                painter: _LinksPainter(
-                  links: _links,
-                  positionOf: (id) {
-                    final node = _nodeById(id);
-                    return node == null ? null : _positionOf(node);
-                  },
-                  colorOf: (categoryId) {
-                    final category = _categoryById(categoryId);
-                    if (category == null) return Colors.white24;
-                    return Color((category['color'] as num).toInt());
-                  },
-                  highlight: _filter,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (_needsCentering) {
+          _needsCentering = false;
+          // Après la mise en page : la vue n'existe pas encore pendant la
+          // construction.
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _centerOn(constraints.biggest),
+          );
+        }
+
+        return InteractiveViewer(
+          transformationController: _transform,
+          constrained: false,
+          minScale: 0.4,
+          maxScale: 2.5,
+          boundaryMargin: const EdgeInsets.all(400),
+          child: SizedBox(
+            width: size.width,
+            height: size.height,
+            child: Stack(
+              children: [
+                // Isolé dans sa propre couche : déplacer un rond ne fait
+                // repeindre que les liens, pas toute la carte.
+                RepaintBoundary(
+                  child: CustomPaint(
+                    size: size,
+                    painter: _LinksPainter(
+                      links: _links,
+                      positionOf: (id) {
+                        final node = _nodeById(id);
+                        return node == null ? null : _positionOf(node);
+                      },
+                      colorOf: (categoryId) {
+                        final category = _categoryById(categoryId);
+                        if (category == null) return Colors.white24;
+                        return Color((category['color'] as num).toInt());
+                      },
+                      highlight: _filter,
+                    ),
+                  ),
                 ),
-              ),
+                for (final node in _nodes) _buildNode(node),
+                if (_isMj) _buildAddNode(),
+              ],
             ),
-            for (final node in _nodes) _buildNode(node),
-            if (_isMj) _buildAddNode(),
-            if (_nodes.isEmpty) _buildEmptyHint(),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -943,16 +1155,17 @@ class _RelationsPageState extends State<RelationsPage> {
   }
 
   /// Le rond « + » : c'est par lui que le MJ agrandit sa carte.
+  ///
+  /// Sa place est celle fixée au dernier chargement, et ne bouge pas tant
+  /// qu'on déplace un rond.
   Widget _buildAddNode() {
-    final position = _nextFreeSpot;
-
     return Positioned(
-      left: position.dx - _nodeRadius,
-      top: position.dy - _nodeRadius,
+      left: _addSpot.dx - _nodeRadius,
+      top: _addSpot.dy - _nodeRadius,
       child: Tooltip(
         message: 'Ajouter un rond',
         child: GestureDetector(
-          onTap: () => _createNode(position),
+          onTap: () => _createNode(_addSpot),
           child: Container(
             width: _nodeRadius * 2,
             height: _nodeRadius * 2,
@@ -967,17 +1180,23 @@ class _RelationsPageState extends State<RelationsPage> {
     );
   }
 
+  /// Le texte d'accueil, posé en bas de l'écran et transparent aux touchers.
+  ///
+  /// Au milieu, il recouvrait le rond « + » et en avalait les touchers : un
+  /// texte capte le doigt comme n'importe quel autre widget.
   Widget _buildEmptyHint() {
-    return Positioned(
-      left: 120,
-      top: 300,
-      child: SizedBox(
-        width: 260,
-        child: Text(
-          _isMj
-              ? 'Carte vide. Touchez le rond « + » pour poser votre premier personnage ou lieu.'
-              : 'Le maître du jeu n\'a pas encore dessiné la carte des relations.',
-          style: const TextStyle(color: Colors.white38),
+    return IgnorePointer(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
+          child: Text(
+            _isMj
+                ? 'Carte vide. Touchez le rond « + » pour poser votre premier personnage ou lieu.'
+                : 'Le maître du jeu n\'a pas encore dessiné la carte des relations.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white38),
+          ),
         ),
       ),
     );
@@ -1058,8 +1277,10 @@ class _NodeDialogState extends State<_NodeDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      backgroundColor: _cardColor,
       title: Text(
         widget.existing == null ? 'Nouveau rond' : 'Renommer le rond',
+        style: const TextStyle(color: Colors.white),
       ),
       content: SingleChildScrollView(
         child: Column(
@@ -1068,7 +1289,8 @@ class _NodeDialogState extends State<_NodeDialog> {
             TextField(
               controller: _controller,
               autofocus: true,
-              decoration: const InputDecoration(labelText: 'Nom'),
+              style: const TextStyle(color: Colors.white),
+              decoration: _dialogField('Nom'),
             ),
             const SizedBox(height: 16),
             Wrap(
@@ -1104,15 +1326,17 @@ class _NodeDialogState extends State<_NodeDialog> {
   }
 }
 
-/// Boîte de saisie d'une ligne de texte, qui possède elle aussi son champ.
+/// Boîte de saisie d'un texte, qui possède elle aussi son champ.
 class _TextPromptDialog extends StatefulWidget {
   final String title;
+  final String label;
   final String? initial;
   final String? hint;
   final int maxLines;
 
   const _TextPromptDialog({
     required this.title,
+    required this.label,
     required this.initial,
     required this.hint,
     required this.maxLines,
@@ -1140,13 +1364,19 @@ class _TextPromptDialogState extends State<_TextPromptDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.title),
+      backgroundColor: _cardColor,
+      title: Text(
+        widget.title,
+        style: const TextStyle(color: Colors.white),
+      ),
       content: SingleChildScrollView(
         child: TextField(
           controller: _controller,
           autofocus: true,
+          minLines: 1,
           maxLines: widget.maxLines,
-          decoration: InputDecoration(hintText: widget.hint),
+          style: const TextStyle(color: Colors.white),
+          decoration: _dialogField(widget.label, hint: widget.hint),
         ),
       ),
       actions: [
