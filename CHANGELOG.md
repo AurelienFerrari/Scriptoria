@@ -17,6 +17,11 @@ et le projet adhère à [Semantic Versioning](https://semver.org/lang/fr/).
   toute la table
 - Le journal des dés se met à jour en temps réel : un jet apparaît chez toute
   la table sans tirer l'écran
+- Répondre à un message en le faisant glisser vers la droite : la réponse cite
+  le message d'origine. Seul l'identifiant du message cité est enregistré,
+  jamais son texte — citer un chuchotement ne le révèle donc jamais à qui
+  n'avait pas le droit de le lire. Répondre publiquement à un chuchotement
+  affiche un avertissement avant l'envoi
 
 ### Corrigé
 - Le chat affichait trois messages codés en dur (« Bienvenue dans le chat ! »,

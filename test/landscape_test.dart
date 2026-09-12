@@ -380,6 +380,15 @@ void _stubRichData(MockSupabaseService service) {
         "visible_to": [kPlayerId],
         "created_at": "2026-09-11T10:01:00Z",
       },
+      {
+        "id": "message-3",
+        "campaign_id": kRoomId,
+        "author_id": kMjId,
+        "body": "Alors on y va, discrètement.",
+        "visible_to": null,
+        "reply_to": "message-1",
+        "created_at": "2026-09-11T10:02:00Z",
+      },
     ],
   );
   when(() => service.getDiceRolls(kRoomId, limit: any(named: 'limit')))

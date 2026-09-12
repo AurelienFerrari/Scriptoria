@@ -16,6 +16,7 @@ Map<String, dynamic> _message({
   String authorId = kPlayerId,
   String body = 'On passe par les égouts.',
   List<String>? visibleTo,
+  String? replyTo,
 }) =>
     {
       'id': id,
@@ -23,6 +24,7 @@ Map<String, dynamic> _message({
       'author_id': authorId,
       'body': body,
       'visible_to': visibleTo,
+      'reply_to': replyTo,
       'created_at': '2026-09-11T10:00:00Z',
     };
 
@@ -73,6 +75,7 @@ void main() {
           authorId: any(named: 'authorId'),
           body: any(named: 'body'),
           visibleTo: any(named: 'visibleTo'),
+          replyTo: any(named: 'replyTo'),
         )).thenAnswer((_) async => returned);
   }
 
@@ -124,6 +127,7 @@ void main() {
           authorId: kPlayerId,
           body: 'Salut la table',
           visibleTo: null,
+          replyTo: null,
         )).called(1);
     expect(find.text('Salut la table'), findsOneWidget);
     // La saisie est vidée une fois le message parti.
@@ -145,6 +149,7 @@ void main() {
           authorId: any(named: 'authorId'),
           body: any(named: 'body'),
           visibleTo: any(named: 'visibleTo'),
+          replyTo: any(named: 'replyTo'),
         ));
   });
 
@@ -154,6 +159,7 @@ void main() {
           authorId: any(named: 'authorId'),
           body: any(named: 'body'),
           visibleTo: any(named: 'visibleTo'),
+          replyTo: any(named: 'replyTo'),
         )).thenThrow(Exception('réseau indisponible'));
 
     await pumpAs(tester, kPlayerId, 'player');
@@ -249,6 +255,145 @@ void main() {
     });
   });
 
+  group('réponses', () {
+    testWidgets('répond à un message en le faisant glisser', (tester) async {
+      when(() => service.getRoomMessages(kRoomId)).thenAnswer(
+        (_) async => [
+          _message(
+            id: 'message-2',
+            authorId: kMjId,
+            body: 'La grille est rouillée.',
+          ),
+        ],
+      );
+      stubSend(_message(
+        id: 'message-3',
+        body: 'Je passe devant.',
+        replyTo: 'message-2',
+      ));
+
+      await pumpAs(tester, kPlayerId, 'player');
+
+      await tester.drag(
+        find.text('La grille est rouillée.'),
+        const Offset(300, 0),
+      );
+      await tester.pumpAndSettle();
+
+      // Le message glissé revient à sa place, et le bandeau le cite.
+      expect(find.text('Réponse à Aurélien'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'Je passe devant.');
+      await tester.tap(find.byTooltip('Envoyer le message'));
+      await tester.pumpAndSettle();
+
+      verify(() => service.createRoomMessage(
+            campaignId: kRoomId,
+            authorId: kPlayerId,
+            body: 'Je passe devant.',
+            visibleTo: null,
+            replyTo: 'message-2',
+          )).called(1);
+      expect(find.text('Réponse à Aurélien'), findsNothing);
+      // La réponse cite l'original.
+      expect(find.byKey(const ValueKey('quote-message-3')), findsOneWidget);
+    });
+
+    testWidgets('annule une réponse avant de l\'envoyer', (tester) async {
+      when(() => service.getRoomMessages(kRoomId))
+          .thenAnswer((_) async => [_message()]);
+      stubSend(_message(id: 'message-9', body: 'Finalement non'));
+
+      await pumpAs(tester, kPlayerId, 'player');
+      await tester.drag(
+        find.text('On passe par les égouts.'),
+        const Offset(300, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Réponse à votre message'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Annuler la réponse'));
+      await tester.pumpAndSettle();
+      expect(find.text('Réponse à votre message'), findsNothing);
+
+      await tester.enterText(find.byType(TextField), 'Finalement non');
+      await tester.tap(find.byTooltip('Envoyer le message'));
+      await tester.pumpAndSettle();
+
+      verify(() => service.createRoomMessage(
+            campaignId: kRoomId,
+            authorId: kPlayerId,
+            body: 'Finalement non',
+            visibleTo: null,
+            replyTo: null,
+          )).called(1);
+    });
+
+    testWidgets('ne cite pas un message que cet écran ne peut pas lire',
+        (tester) async {
+      // La réponse vise un chuchotement qui n'a pas été adressé à ce joueur :
+      // la base ne le lui a pas renvoyé, la citation ne doit rien en montrer.
+      when(() => service.getRoomMessages(kRoomId)).thenAnswer(
+        (_) async => [
+          _message(
+            id: 'message-3',
+            authorId: kMjId,
+            body: 'Réponse publique',
+            replyTo: 'chuchotement-inconnu',
+          ),
+        ],
+      );
+
+      await pumpAs(tester, kPlayerId, 'player');
+
+      expect(find.text('Réponse publique'), findsOneWidget);
+      expect(find.byKey(const ValueKey('quote-message-3')), findsNothing);
+    });
+
+    testWidgets('prévient qu\'une réponse à un chuchotement sera publique',
+        (tester) async {
+      when(() => service.getRoomMessages(kRoomId)).thenAnswer(
+        (_) async => [
+          _message(
+            id: 'message-2',
+            authorId: kMjId,
+            body: 'Le garde ment.',
+            visibleTo: [kPlayerId],
+          ),
+        ],
+      );
+
+      await pumpAs(tester, kPlayerId, 'player');
+      await tester.drag(find.text('Le garde ment.'), const Offset(300, 0));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Votre réponse sera lue par toute la table.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('abandonne la réponse si le message cité est supprimé',
+        (tester) async {
+      when(() => service.getRoomMessages(kRoomId)).thenAnswer(
+        (_) async => [_message(id: 'message-2', authorId: kMjId)],
+      );
+
+      await pumpAs(tester, kPlayerId, 'player');
+      await tester.drag(
+        find.text('On passe par les égouts.'),
+        const Offset(300, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Réponse à Aurélien'), findsOneWidget);
+
+      changes.add(const RowChange(RowChangeKind.deleted, {'id': 'message-2'}));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Réponse à Aurélien'), findsNothing);
+    });
+  });
+
   group('chuchotements', () {
     testWidgets('le MJ chuchote à un joueur choisi', (tester) async {
       stubSend(_message(
@@ -282,6 +427,7 @@ void main() {
             authorId: kMjId,
             body: 'Le garde ment.',
             visibleTo: [kPlayerId],
+            replyTo: null,
           )).called(1);
       expect(find.text('Chuchoté à Camille'), findsOneWidget);
     });

@@ -292,12 +292,14 @@ class AuthProvider extends ChangeNotifier {
     required String authorId,
     required String body,
     List<String>? visibleTo,
+    String? replyTo,
   }) {
     return _supabaseService.createRoomMessage(
       campaignId: campaignId,
       authorId: authorId,
       body: body,
       visibleTo: visibleTo,
+      replyTo: replyTo,
     );
   }
 

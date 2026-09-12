@@ -769,6 +769,7 @@ class SupabaseService {
     required String authorId,
     required String body,
     List<String>? visibleTo,
+    String? replyTo,
   }) async {
     return await _client
         .from('room_messages')
@@ -777,6 +778,7 @@ class SupabaseService {
           'author_id': authorId,
           'body': body,
           'visible_to': visibleTo,
+          'reply_to': replyTo,
         })
         .select()
         .single();
